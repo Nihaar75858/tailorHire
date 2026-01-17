@@ -2,7 +2,7 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import Register from "./pages/Auth/Register";
 import Login from "./pages/Auth/Login";
-import UserDashboard from "./pages/User/Userdashboard";
+import UserDashboard from "./pages/User/UserDashboard";
 import PublicDashBoard from "./pages/Public/PublicDashBoard";
 import Navbar from "./components/Navbar/Navbar";
 import "./App.css";

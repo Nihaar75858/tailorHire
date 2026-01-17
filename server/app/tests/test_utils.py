@@ -1,10 +1,11 @@
 # import pytest
 from unittest.mock import patch, MagicMock
 from api.utils import HuggingFaceAI
+from sentence_transformers import SentenceTransformer, util
 from unittest.mock import patch
 
 # @pytest.mark.django_db
-@patch("core.utils.requests.post")
+@patch("api.utils.requests.post")
 def test_generate_cover_letter_success(mock_post, settings):
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -21,7 +22,7 @@ def test_generate_cover_letter_success(mock_post, settings):
     assert "great cover letter" in result
     mock_post.assert_called_once()
     
-@patch("core.utils.requests.post")
+@patch("api.utils.requests.post")
 def test_generate_cover_letter_fallback_on_error(mock_post):
     mock_response = MagicMock()
     mock_response.status_code = 500
@@ -37,23 +38,7 @@ def test_generate_cover_letter_fallback_on_error(mock_post):
     assert "Dear Hiring Manager" in result
     assert "Bob" in result
 
-@patch("core.utils.requests.post")
-def test_generate_cover_letter_fallback_on_error(mock_post):
-    mock_response = MagicMock()
-    mock_response.status_code = 500
-    mock_post.return_value = mock_response
-
-    ai = HuggingFaceAI()
-    result = ai.generate_cover_letter(
-        resume_text="",
-        job_description="Backend developer role.",
-        user_profile={"name": "Bob", "skills": "APIs, REST"}
-    )
-
-    assert "Dear Hiring Manager" in result
-    assert "Bob" in result
-
-@patch("core.utils.requests.post")
+@patch("api.utils.requests.post")
 def test_generate_chat_response_success(mock_post):
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -80,8 +65,8 @@ class MockJob:
         self.description = description
         self.requirements = requirements
 
-@patch("core.utils.SentenceTransformer")
-@patch("core.utils.util.pytorch_cos_sim")
+@patch("api.utils.util.pytorch_cos_sim")
+@patch("api.utils.SentenceTransformer")
 def test_recommend_jobs(mock_sim, mock_model):
     mock_encoder = MagicMock()
     mock_encoder.encode.return_value = "embedding"

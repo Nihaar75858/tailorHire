@@ -1,13 +1,24 @@
-version: "3"
+version: "3.9"
 
 services:
-  app:
-      build: 
-            context: ./server
-      volumes:
-        - ./server:/server
-      working_dir: /server/app
-      command: >
-        sh -c "python3 manage.py runserver 0.0.0.0:8000"
-      ports:
-        - "8000:8000" 
+  backend:
+    build: ./server/app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./server/app:/app
+      - sqlite_data:/app/data
+    env_file:
+      - ./server/app/.env
+
+  frontend:
+    build: ./client/app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client/app:/app
+    depends_on:
+      - backend
+
+volumes:
+  sqlite_data:

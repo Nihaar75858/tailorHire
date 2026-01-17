@@ -1,5 +1,6 @@
 import requests
 from django.conf import settings
+from sentence_transformers import SentenceTransformer, util
 import torch
 
 class HuggingFaceAI:
@@ -132,7 +133,7 @@ Sincerely,
     def recommend_jobs(self, user_skills, jobs):
         """Recommend jobs based on skill similarity"""
         try:
-            from sentence_transformers import SentenceTransformer, util
+            # from sentence_transformers import SentenceTransformer, util
             
             model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
             

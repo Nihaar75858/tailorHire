@@ -6,6 +6,7 @@ from pathlib import Path
 from api.serializer import UserSerializer
 from api import models
 from django.core.files.uploadedfile import SimpleUploadedFile
+import pytest
 import json
 
 create_user = reverse('customuser-list')
@@ -144,31 +145,8 @@ class UserApiTest(TestCase):
         res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data["username"], user.username)
-
-class TestJobViewSet(TestCase):
-    def api_client(self):
-        return APIClient()
-
-    def user(self):
-        return models.CustomUser.objects.create_user(username="recruiter", password="test123")
-
-    def auth_client(self, api_client, user):
-        api_client.force_authenticate(user=user)
-        return api_client
-
-    def job(self, user):
-        return models.Job.objects.create(
-            title="Software Engineer",
-            company="Cartify Inc",
-            location="Remote",
-            salary_min=70000,
-            salary_max=120000,
-            job_type="full-time",
-            description="Develop scalable systems",
-            requirements=["Python", "Django", "REST API"],
-            posted_by=user,
-        )
-
+@pytest.mark.django_db
+class TestJobViewSet:
     def test_list_jobs(self, auth_client, job):
         """Should list active jobs"""
         url = reverse("job-list")
@@ -224,6 +202,8 @@ class TestJobViewSet(TestCase):
 
     def test_recommended_jobs_without_skills(self, auth_client, user):
         """Should return error if user has no skills"""
+        user.skills = ""
+        user.save()
         url = reverse("job-recommended")
         response = auth_client.get(url)
         assert response.status_code == 400

@@ -5,7 +5,6 @@ from decimal import Decimal
 
 class UserModelTest(TestCase):
     """Tests for the CustomUser model"""
-    
     def test_create_user_model(self):
         """Test user creation and __str__ method"""
         user = models.CustomUser.objects.create(
