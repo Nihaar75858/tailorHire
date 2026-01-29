@@ -3,6 +3,9 @@ from django.conf import settings
 from sentence_transformers import SentenceTransformer, util
 import torch
 
+# Call the model once per process
+JOB_EMBEDDING_MODEL = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+
 class HuggingFaceAI:
     def __init__(self):
         self.api_key = settings.HUGGINGFACE_API_KEY
@@ -61,7 +64,7 @@ class HuggingFaceAI:
         name = user_profile.get('name', 'Applicant')
         skills = user_profile.get('skills', 'various technical skills')
         
-        return f"""Dear Hiring Manager,
+        return f"""Respected Hiring Manager,
 
 I am writing to express my strong interest in the position at your esteemed organization. With my background in {skills} and proven track record in the field, I am confident I would be a valuable addition to your team.
 
@@ -135,7 +138,7 @@ Sincerely,
         try:
             # from sentence_transformers import SentenceTransformer, util
             
-            model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+            model = JOB_EMBEDDING_MODEL
             
             skill_embedding = model.encode(user_skills, convert_to_tensor=True)
             

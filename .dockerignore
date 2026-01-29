@@ -8,3 +8,4 @@ Dockerfile
 server/app/db.sqlite3
 server/.pytest_cache/
 server/app/.env
+docs/

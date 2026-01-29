@@ -14,9 +14,7 @@ services:
   frontend:
     build: ./client/app
     ports:
-      - "3000:3000"
-    volumes:
-      - ./client/app:/app
+      - "5173:5173"
     depends_on:
       - backend
 
