@@ -1,4 +1,4 @@
-// src/utils/__tests__/constants.test.js
+// src/constants.test.js
 import { MOCK_JOBS, API_BASE_URL } from '../src/utils/constants';
 import { describe, test, expect } from "vitest";
 
