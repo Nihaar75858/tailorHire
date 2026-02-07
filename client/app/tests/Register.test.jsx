@@ -4,8 +4,8 @@ import { BrowserRouter } from "react-router-dom";
 import Register from "../src/pages/Auth/Register";
 
 beforeEach(() => {
-  global.alert = vi.fn();
-  global.fetch = vi.fn(() =>
+  globalThis.alert = vi.fn();
+  globalThis.fetch = vi.fn(() =>
     Promise.resolve({
       ok: true,
       json: () => Promise.resolve({ message: "Registration successful" }),

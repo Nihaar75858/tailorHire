@@ -38,7 +38,7 @@ describe('useJobs hook', () => {
 });
 
 test('sets error if fetch fails', () => {
-  vi.spyOn(global, 'setTimeout').mockImplementationOnce(() => {
+  vi.spyOn(globalThis, 'setTimeout').mockImplementationOnce(() => {
     throw new Error('Fetch failed');
   });
 
