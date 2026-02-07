@@ -1,7 +1,6 @@
 // src/tests/useJobs.test.js
 import { renderHook, act } from '@testing-library/react';
-import jest from "@testing-library/jest-dom";
-import { describe, test, expect, beforeEach, afterEach } from "vitest";
+import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import { useJobs } from '../src/components/hooks/useJobs';
 import { MOCK_JOBS } from '../src/utils/constants';
 
@@ -17,11 +16,11 @@ describe('useJobs hook', () => {
 
 describe('useJobs hook', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   test('loads jobs successfully', async () => {
@@ -29,7 +28,7 @@ describe('useJobs hook', () => {
 
     // Fast-forward the timeout
     act(() => {
-      jest.advanceTimersByTime(500);
+      vi.advanceTimersByTime(500);
     });
 
     expect(result.current.jobs).toEqual(MOCK_JOBS);
@@ -39,7 +38,7 @@ describe('useJobs hook', () => {
 });
 
 test('sets error if fetch fails', () => {
-  jest.spyOn(global, 'setTimeout').mockImplementationOnce(() => {
+  vi.spyOn(global, 'setTimeout').mockImplementationOnce(() => {
     throw new Error('Fetch failed');
   });
 
