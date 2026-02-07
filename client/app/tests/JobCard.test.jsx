@@ -73,4 +73,13 @@ test('handles empty requirements gracefully', () => {
   expect(screen.queryByText(/react/i)).not.toBeInTheDocument();
 });
 
+test('renders job icons', () => {
+  render(<JobCard job={mockJob} onApply={mockApply} onSave={mockSave} />);
+
+  expect(screen.getByTestId('icon-location')).toBeInTheDocument();
+  expect(screen.getByTestId('icon-salary')).toBeInTheDocument();
+  expect(screen.getByTestId('icon-date')).toBeInTheDocument();
+});
+
+
 
