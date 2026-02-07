@@ -12,12 +12,12 @@ describe("DashboardFooter Component", () => {
 
     // Tagline
     expect(
-      screen.getByText(/making the world a better place/i)
+      screen.getByText(/You're Job-searching begins from here/i)
     ).toBeInTheDocument();
 
     // Social icons (just check one or two as representatives)
-    expect(screen.getByLabelText(/facebook/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/github/i)).toBeInTheDocument();
+    expect(screen.getByTestId(/facebook-icon/i)).toBeInTheDocument();
+    expect(screen.getByTestId(/github-icon/i)).toBeInTheDocument();
   });
 
   it("renders key footer sections and legal notice", () => {

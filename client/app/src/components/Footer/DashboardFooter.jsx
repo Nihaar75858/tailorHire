@@ -21,9 +21,9 @@ export default function DashboardFooter() {
             You're Job-searching begins from here
           </p>
           <div className="flex space-x-4 pt-2 text-lg cursor-pointer">
-            <FaFacebook />
+            <FaFacebook data-testid="facebook-icon"/>
             <FaSquareXTwitter />
-            <FaGithub />
+            <FaGithub data-testid="github-icon"/>
           </div>
         </div>
 

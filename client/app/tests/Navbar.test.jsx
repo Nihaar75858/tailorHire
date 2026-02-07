@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, test, expect, vi, beforeEach} from "vitest";
 import Navbar from "../src/components/Navbar/Navbar";
 import { useUser } from "../src/components/hooks/useAuth";
 import { getNavigationConfig } from "../src/components/constants/utils";
