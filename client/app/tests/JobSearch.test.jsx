@@ -79,7 +79,6 @@ test('calls onSearch when Enter key pressed', () => {
   fireEvent.keyPress(input, {
     key: 'Enter',
     code: 'Enter',
-    charCode: 13
   });
 
   expect(mockOnSearch).toHaveBeenCalledTimes(1);
