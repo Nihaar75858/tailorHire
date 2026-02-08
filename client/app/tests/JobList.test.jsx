@@ -4,7 +4,7 @@ import { test, expect, vi } from "vitest";
 import JobList from '../src/components/jobs/JobList';
 
 // Mock JobCard
-vi.mock('@/components/jobs/JobCard', () => ({
+vi.mock('../src/components/jobs/JobCard', () => ({
   default: ({ job, onApply, onSave }) => (
     <div data-testid="job-card">
       <span>{job.title}</span>
