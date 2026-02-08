@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { describe, test, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import UserDashboard from "../src/pages/User/UserDashboard";
 import { useUser } from "../src/components/hooks/useAuth";

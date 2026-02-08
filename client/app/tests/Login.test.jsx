@@ -1,6 +1,6 @@
 // tests/Login.test.jsx
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BrowserRouter } from "react-router-dom";
 import Login from "../src/pages/Auth/Login";
 

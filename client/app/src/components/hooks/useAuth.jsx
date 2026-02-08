@@ -9,15 +9,18 @@ export const UserProvider = ({ children }) => {
   const [access, setAccess] = useState(getAccessToken());
 
   // Watch for token changes (login/logout)
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     const currentAccess = getAccessToken();
+  //     if (currentAccess !== access) {
+  //       setAccess(currentAccess);
+  //     }
+  //   }, 500);
+  //   return () => clearInterval(interval);
+  // }, [access]);
   useEffect(() => {
-    const interval = setInterval(() => {
-      const currentAccess = getAccessToken();
-      if (currentAccess !== access) {
-        setAccess(currentAccess);
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, [access]);
+    setAccess(getAccessToken());
+  }, [])
 
   // Fetch user when access token changes
   useEffect(() => {
