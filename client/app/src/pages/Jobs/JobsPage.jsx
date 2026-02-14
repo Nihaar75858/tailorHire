@@ -1,7 +1,7 @@
 // ============================================
 // src/pages/JobsPage.jsx
 // ============================================
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import JobSearch from '../../components/jobs/JobSearch';
 import JobList from '../../components/jobs/JobList';
 import { useJobs } from '../../components/hooks/useJobs';
@@ -11,7 +11,7 @@ const JobsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredJobs, setFilteredJobs] = useState([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setFilteredJobs(jobs);
   }, [jobs]);
 
@@ -32,12 +32,10 @@ const JobsPage = () => {
 
   const handleApply = (job) => {
     alert(`Applying to ${job.title} at ${job.company}`);
-    // In production: navigate to application page or open modal
   };
 
   const handleSave = (job) => {
     alert(`Saved ${job.title}`);
-    // In production: call API to save job
   };
 
   if (loading) {
@@ -57,12 +55,12 @@ const JobsPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+    <div className="space-y-6 p-6 bg-gradient-to-r from-orange-200 via-orange-400 to-orange-600">
+      <div className='text-white'>
+        <h2 className="text-3xl font-bold mb-2">
           Find Your Next Opportunity
         </h2>
-        <p className="text-gray-600">Browse thousands of jobs tailored to your skills</p>
+        <p>Browse thousands of jobs tailored to your skills</p>
       </div>
 
       <JobSearch

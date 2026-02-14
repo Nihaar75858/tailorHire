@@ -4,6 +4,7 @@ import Register from "./pages/Auth/Register";
 import Login from "./pages/Auth/Login";
 import UserDashboard from "./pages/User/UserDashboard";
 import PublicDashBoard from "./pages/Public/PublicDashBoard";
+import JobsPage from "./pages/Jobs/JobsPage";
 import Navbar from "./components/Navbar/Navbar";
 import "./App.css";
 
@@ -20,6 +21,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/userdashboard" element={<UserDashboard />} />
+        <Route path="/jobs" element={<JobsPage />} />
       </Routes>
     </>
   );

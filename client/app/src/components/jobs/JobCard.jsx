@@ -12,7 +12,7 @@ const JobCard = ({ job, onApply, onSave }) => {
           <h3 className="text-xl font-semibold text-gray-900 mb-1">
             {job.title}
           </h3>
-          <p className="text-indigo-600 font-medium">{job.company}</p>
+          <p className="text-cyan-600 font-medium">{job.company}</p>
         </div>
         <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
           {job.type}
@@ -51,7 +51,7 @@ const JobCard = ({ job, onApply, onSave }) => {
         <button
           aria-label="Apply to job"
           onClick={() => onApply(job)}
-          className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+          className="flex-1 px-4 py-2 bg-neutral-600 text-white rounded-lg hover:bg-stone-900 transition-colors font-medium"
         >
           Apply Now
         </button>

@@ -2,9 +2,11 @@ FROM node:20-slim
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm install
+COPY package*.json ./
+RUN npm ci --include=optional
 
 COPY . .
 
-CMD ["npm", "run", "dev", "--", "--host"]
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

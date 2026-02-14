@@ -15,6 +15,9 @@ services:
     build: ./client/app
     ports:
       - "5173:5173"
+    volumes:
+      - ./client/app:/app
+      - /app/node_modules
     depends_on:
       - backend
 

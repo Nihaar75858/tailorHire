@@ -20,7 +20,7 @@ const JobSearch = ({ searchQuery, onSearchChange, onSearch }) => {
       </div>
       <button
         onClick={onSearch}
-        className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+        className="px-6 py-3 bg-white text-black rounded-lg hover:bg-gray-200 transition-colors font-medium"
       >
         Search
       </button>
