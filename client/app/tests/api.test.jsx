@@ -1,26 +1,49 @@
-import ApiService from '../src/services/api';
 import { test, expect, vi } from "vitest";
 
+// Mock constants BEFORE importing ApiService
+vi.mock('../src/utils/constants', () => ({
+  API_BASE_URL: 'http://localhost:8000/api',
+}));
+
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+};
+global.localStorage = localStorageMock;
+
+// Mock fetch
 global.fetch = vi.fn();
+
+import ApiService from '../src/services/api';
 
 beforeEach(() => {
   fetch.mockClear();
-  localStorage.clear();
+  localStorageMock.getItem.mockClear();
+  localStorageMock.setItem.mockClear();
+  localStorageMock.removeItem.mockClear();
+  localStorageMock.clear.mockClear();
 });
 
-test('loads token from localStorage on init', () => {
-  localStorage.setItem('access_token', 'abc123');
-
-  const api = new (require('../api').default.constructor)();
-
-  expect(api.token).toBe('abc123');
+test('loads token from localStorage on init', async () => {
+  // Mock localStorage to return a token
+  localStorageMock.getItem.mockReturnValue('abc123');
+  
+  // Dynamically import to get fresh instance
+  vi.resetModules();
+  const { default: freshApi } = await import('../src/services/api');
+  
+  expect(freshApi.token).toBe('abc123');
+  expect(localStorageMock.getItem).toHaveBeenCalledWith('access_token');
 });
 
 test('setToken stores token in memory and localStorage', () => {
   ApiService.setToken('xyz');
 
   expect(ApiService.token).toBe('xyz');
-  expect(localStorage.getItem('access_token')).toBe('xyz');
+  expect(localStorageMock.setItem).toHaveBeenCalledWith('access_token', 'xyz');
 });
 
 test('clearToken removes token from memory and storage', () => {
@@ -29,7 +52,7 @@ test('clearToken removes token from memory and storage', () => {
   ApiService.clearToken();
 
   expect(ApiService.token).toBeNull();
-  expect(localStorage.getItem('access_token')).toBeNull();
+  expect(localStorageMock.removeItem).toHaveBeenCalledWith('access_token');
 });
 
 test('adds Authorization header when token exists', async () => {
@@ -47,6 +70,26 @@ test('adds Authorization header when token exists', async () => {
     expect.objectContaining({
       headers: expect.objectContaining({
         Authorization: 'Bearer token123',
+      }),
+    })
+  );
+});
+
+test('does not add Authorization header when no token', async () => {
+  ApiService.clearToken();
+
+  fetch.mockResolvedValue({
+    ok: true,
+    json: async () => ({ success: true }),
+  });
+
+  await ApiService.request('/test');
+
+  expect(fetch).toHaveBeenCalledWith(
+    expect.any(String),
+    expect.objectContaining({
+      headers: expect.not.objectContaining({
+        Authorization: expect.anything(),
       }),
     })
   );
@@ -98,6 +141,20 @@ test('getJobs builds query string correctly', async () => {
   );
 });
 
+test('getJobs without params calls endpoint without query string', async () => {
+  fetch.mockResolvedValue({
+    ok: true,
+    json: async () => ([]),
+  });
+
+  await ApiService.getJobs();
+
+  expect(fetch).toHaveBeenCalledWith(
+    expect.stringContaining('/jobs/'),
+    expect.any(Object)
+  );
+});
+
 test('getJob calls correct endpoint', async () => {
   fetch.mockResolvedValue({
     ok: true,
@@ -118,5 +175,6 @@ test('logout clears token', async () => {
   await ApiService.logout();
 
   expect(ApiService.token).toBeNull();
+  expect(localStorageMock.removeItem).toHaveBeenCalledWith('access_token')
 });
 
