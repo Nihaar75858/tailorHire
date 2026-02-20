@@ -6,4 +6,6 @@ router = DefaultRouter()
 router.register('users', UserViewSet)
 router.register('jobs', JobViewSet, basename='job')
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('', include(router.urls))
+]

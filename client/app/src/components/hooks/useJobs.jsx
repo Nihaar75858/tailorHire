@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MOCK_JOBS } from '../../utils/constants';
+import api from '../../services/api';
 
 export const useJobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -9,15 +10,9 @@ export const useJobs = () => {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        setTimeout(() => {
-          try {
-            setJobs(MOCK_JOBS);
-            setLoading(false);
-          } catch (err) {
-            setError(err.message);
-            setLoading(false);
-          }
-        }, 500);
+        const data = await api.getJobs();
+        setJobs(data.results);
+        setLoading(false);
       } catch (err) {
         setError(err.message);
         setLoading(false);
