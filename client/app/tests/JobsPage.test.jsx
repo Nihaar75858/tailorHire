@@ -23,6 +23,14 @@ const mockJobs = [
   }
 ];
 
+vi.mock('../src/services/api', () => ({
+  default: {
+    getJobs: vi.fn(),
+    applyToJob: vi.fn(),
+  },
+}));
+
+import api from '../src/services/api';
 
 vi.mock('../src/components/jobs/JobSearch', () => ({
   default: ({ searchQuery, onSearchChange, onSearch }) => (
@@ -75,7 +83,7 @@ test('shows error state', () => {
   render(<JobsPage />);
 
   expect(
-    screen.getByText(/error loading jobs/i)
+    screen.getByText(/error: api failed/i)
   ).toBeInTheDocument();
 });
 
@@ -106,13 +114,20 @@ test('filters jobs based on search query', async () => {
     error: null
   });
 
+  api.getJobs.mockResolvedValue({
+    results: [mockJobs[0]] // only frontend
+  });
+
   render(<JobsPage />);
 
   const input = screen.getByTestId('search-input');
 
   await user.type(input, 'Frontend');
-
   await user.click(screen.getByText(/search/i));
+
+  expect(api.getJobs).toHaveBeenCalledWith({
+    search: 'Frontend'
+  });
 
   expect(
     screen.getByText('Frontend Developer')
@@ -156,12 +171,21 @@ test('calls apply handler', async () => {
     error: null
   });
 
+  api.applyToJob.mockResolvedValue({});
+
   render(<JobsPage />);
 
   await user.click(screen.getAllByText(/apply/i)[0]);
 
+  expect(api.applyToJob).toHaveBeenCalledWith(
+    1,
+    expect.objectContaining({
+      cover_letter: expect.any(String),
+    })
+  );
+
   expect(window.alert).toHaveBeenCalledWith(
-    expect.stringContaining('Applying')
+    expect.stringContaining('Applied to')
   );
 });
 
