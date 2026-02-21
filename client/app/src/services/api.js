@@ -6,17 +6,17 @@ import { API_BASE_URL } from "../utils/constants";
 export class ApiService {
   constructor() {
     this.baseURL = API_BASE_URL;
-    this.token = localStorage.getItem("access_token");
+    this.token = localStorage.getItem("accessToken");
   }
 
   setToken(token) {
     this.token = token;
-    localStorage.setItem("access_token", token);
+    localStorage.setItem("accessToken", token);
   }
 
   clearToken() {
     this.token = null;
-    localStorage.removeItem("access_token");
+    localStorage.removeItem("accessToken");
   }
 
   async request(endpoint, options = {}) {
@@ -38,10 +38,14 @@ export class ApiService {
       const response = await fetch(`${this.baseURL}${endpoint}`, config);
 
       if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('✅ API Data:', data);
+      return data;
     } catch (error) {
       console.error("API request failed:", error);
       throw error;

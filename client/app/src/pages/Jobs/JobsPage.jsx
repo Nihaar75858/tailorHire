@@ -43,14 +43,7 @@ const JobsPage = () => {
   };
 
   const handleApply = async (job) => {
-    try {
-      await api.applyToJob(job.id, {
-        cover_letter: "I am interested in this position...",
-      });
-      alert(`Applied to ${job.title} at ${job.company}`);
-    } catch (err) {
-      alert("Application failed: " + err.message);
-    }
+    console.log("Thank you for applying. We'll get back to you soon.")
   };
 
   const handleSave = (job) => {

@@ -36,14 +36,14 @@ test('loads token from localStorage on init', async () => {
   const { default: freshApi } = await import('../src/services/api');
   
   expect(freshApi.token).toBe('abc123');
-  expect(localStorageMock.getItem).toHaveBeenCalledWith('access_token');
+  expect(localStorageMock.getItem).toHaveBeenCalledWith('accessToken');
 });
 
 test('setToken stores token in memory and localStorage', () => {
   ApiService.setToken('xyz');
 
   expect(ApiService.token).toBe('xyz');
-  expect(localStorageMock.setItem).toHaveBeenCalledWith('access_token', 'xyz');
+  expect(localStorageMock.setItem).toHaveBeenCalledWith('accessToken', 'xyz');
 });
 
 test('clearToken removes token from memory and storage', () => {
@@ -52,7 +52,7 @@ test('clearToken removes token from memory and storage', () => {
   ApiService.clearToken();
 
   expect(ApiService.token).toBeNull();
-  expect(localStorageMock.removeItem).toHaveBeenCalledWith('access_token');
+  expect(localStorageMock.removeItem).toHaveBeenCalledWith('accessToken');
 });
 
 test('adds Authorization header when token exists', async () => {
@@ -112,6 +112,7 @@ test('throws error on non-OK response', async () => {
   fetch.mockResolvedValue({
     ok: false,
     status: 500,
+    json: async () => ({ message: 'Server exploded' }),
   });
 
   await expect(ApiService.request('/jobs'))
@@ -175,6 +176,6 @@ test('logout clears token', async () => {
   await ApiService.logout();
 
   expect(ApiService.token).toBeNull();
-  expect(localStorageMock.removeItem).toHaveBeenCalledWith('access_token')
+  expect(localStorageMock.removeItem).toHaveBeenCalledWith('accessToken')
 });
 

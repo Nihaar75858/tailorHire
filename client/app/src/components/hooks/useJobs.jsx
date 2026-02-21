@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { MOCK_JOBS } from '../../utils/constants';
 import api from '../../services/api';
 
 export const useJobs = () => {
@@ -11,7 +10,7 @@ export const useJobs = () => {
     const fetchJobs = async () => {
       try {
         const data = await api.getJobs();
-        setJobs(data.results);
+        setJobs(data);
         setLoading(false);
       } catch (err) {
         setError(err.message);
