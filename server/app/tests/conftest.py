@@ -1,7 +1,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
-from api.models import Job
+from api.models import CustomUser, Job
 
 User = get_user_model()
 
@@ -29,4 +29,22 @@ def job(user):
         description="Test job description",
         requirements=["Python", "Django"],
         posted_by=user
+    )
+    
+@pytest.fixture
+def user():
+    return CustomUser.objects.create_user(
+        username="testuser",
+        password="test123"
+    )
+
+
+@pytest.fixture
+def job():
+    return Job.objects.create(
+        title="Backend Dev",
+        company="TechCorp",
+        location="NY",
+        description="APIs",
+        requirements=[]
     )

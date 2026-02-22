@@ -1,5 +1,6 @@
 import pytest
-from api.models import CustomUser, Job
+import django.db
+from api.models import CustomUser, Job, SavedJob
 from django.utils import timezone
 from decimal import Decimal
 
@@ -168,3 +169,84 @@ def test_salary_range_only_max():
     )
 
     assert job.salary_range() == "Up to $50000.00"
+    
+#########################
+# Saved Job Model Tests
+#########################
+@pytest.mark.django_db
+def test_create_saved_job(user, job):
+    saved = SavedJob.objects.create(user=user, job=job)
+
+    assert saved.id is not None
+    assert saved.user == user
+    assert saved.job == job
+    assert saved.saved_at is not None
+    
+@pytest.mark.django_db
+def test_saved_job_str(user, job):
+    saved = SavedJob.objects.create(user=user, job=job)
+
+    assert str(saved) == f"{user.username} saved {job.title}"
+
+@pytest.mark.django_db
+def test_user_cannot_save_same_job_twice(user, job):
+    SavedJob.objects.create(user=user, job=job)
+
+    with pytest.raises(django.db.utils.IntegrityError):
+        SavedJob.objects.create(user=user, job=job)
+        
+@pytest.mark.django_db
+def test_saved_job_ordering(user, job):
+    job2 = Job.objects.create(
+        title="Frontend Dev",
+        company="WebCo",
+        location="Remote",
+        description="UI",
+        requirements=[]
+    )
+
+    saved1 = SavedJob.objects.create(user=user, job=job)
+    saved2 = SavedJob.objects.create(user=user, job=job2)
+
+    saved_jobs = SavedJob.objects.all()
+
+    assert saved_jobs.first() == saved2
+    assert saved_jobs.last() == saved1
+    
+@pytest.mark.django_db
+def test_saved_job_deleted_when_user_deleted(job):
+    user = CustomUser.objects.create_user(
+        username="tempuser",
+        password="test123"
+    )
+
+    SavedJob.objects.create(user=user, job=job)
+
+    user.delete()
+
+    assert SavedJob.objects.count() == 0
+    
+@pytest.mark.django_db
+def test_saved_job_deleted_when_job_deleted(user):
+    job = Job.objects.create(
+        title="Temp Job",
+        company="TempCo",
+        location="LA",
+        description="Temp",
+        requirements=[]
+    )
+
+    SavedJob.objects.create(user=user, job=job)
+
+    job.delete()
+
+    assert SavedJob.objects.count() == 0
+    
+@pytest.mark.django_db
+def test_reverse_relationships(user, job):
+    saved = SavedJob.objects.create(user=user, job=job)
+
+    assert user.saved_jobs.count() == 1
+    assert job.saved_by.count() == 1
+    assert user.saved_jobs.first() == saved
+    assert job.saved_by.first() == saved
