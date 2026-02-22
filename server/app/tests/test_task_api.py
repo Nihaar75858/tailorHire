@@ -145,6 +145,7 @@ class UserApiTest(TestCase):
         res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data["username"], user.username)
+        
 @pytest.mark.django_db
 class TestJobViewSet:
     def test_list_jobs(self, auth_client, job):

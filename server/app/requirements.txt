@@ -10,3 +10,5 @@ sentence-transformers==2.7.0
 huggingface-hub==0.35.2
 django-cors-headers==4.3.0
 gunicorn==21.2.0
+pytest
+pytest-django
