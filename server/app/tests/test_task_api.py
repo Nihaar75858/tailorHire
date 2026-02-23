@@ -6,53 +6,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 import pytest
 import json
 
-# create_user = reverse('customuser-list')
-
-# def update_url(id):
-#     return reverse('customuser-detail', args=[id])
-
-# def details_url(id):
-#     return reverse('customuser-detail', args=[id])
-
-# def sample_payload():
-#     image_path = Path(__file__).resolve().parent.parent / "profile" / "test.jpg"
-#     with open(image_path, "rb") as img:
-#         image = SimpleUploadedFile("test.jpg", img.read(), content_type="image/jpeg")
-        
-#     payload = {
-#         "firstName": "John",
-#         "lastName": "Doe",
-#         "username": "John123",
-#         "email": "user1@example.com",
-#         "password": "hello123",
-#         "bio": "I am ready to work",
-#         "location": "Indiana, USA",
-#         "skills": "Java, Python, C",
-#         "profile_picture": image,
-#         "role": json.dumps(["User"]),
-#     }
-#     serializer = UserSerializer(data=payload)
-#     serializer.is_valid(raise_exception=True)
-#     return serializer.save()
-
 @pytest.mark.django_db
 class TestUserApi:
-    # def setUp(self):
-    #     self.login_url = reverse('customuser-login-user')
-    #     self.logout_url = reverse('customuser-logout-user')
-        
-    # def authenticate_user(self):
-    #     """Helper: create a user, log in, and set JWT token for authenticated requests."""
-    #     user = sample_payload()
-    #     payload = {
-    #         "username": user.username,
-    #         "password": "hello123",
-    #     }
-    #     res = self.client.post(self.login_url, payload, format='json')
-    #     token = res.data.get("access")
-    #     self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
-    #     return user, res
-
     def test_create_user(self, api_client):
         """Create Test User"""
         url = reverse("customuser-list")
@@ -152,29 +107,6 @@ class TestUserApi:
         res = api_client.patch(url, payload, format="json")
 
         assert res.status_code == status.HTTP_200_OK
-        
-        # image_path = Path(__file__).resolve().parent.parent / "profile" / "test.jpg"
-        # with open(image_path, "rb") as img:
-        #     image = SimpleUploadedFile("test.jpg", img.read(), content_type="image/jpeg")
-            
-        # payload = {
-        #     "firstName": "John",
-        #     "lastName": "Doe",
-        #     "username": "John123",
-        #     "email": "user1@example.com",
-        #     "password": "hello123",
-        #     "bio": "I am ready to work",
-        #     "location": "Indiana, USA",
-        #     "skills": "Java, Python, C",
-        #     "profile_picture": image,
-        #     "role": json.dumps(["User"]),
-        # }
-
-        # url = update_url(user.id)
-        # res = self.client.put(url, payload, format='multipart')
-        # print(res.data)
-        # user.refresh_from_db()
-        # self.assertEqual(res.status_code, status.HTTP_200_OK)
 
     def test_user_details(self, api_client, create_user):
         """Test User Details to be sent to the Frontend"""
@@ -195,11 +127,6 @@ class TestUserApi:
 
         assert res.status_code == status.HTTP_200_OK
         assert res.data["username"] == user.username
-        
-        # url = details_url(user.id)
-        # res = self.client.get(url)
-        # self.assertEqual(res.status_code, status.HTTP_200_OK)
-        # self.assertEqual(res.data["username"], user.username)
         
 @pytest.mark.django_db
 class TestJobViewSet:
@@ -268,3 +195,78 @@ class TestJobViewSet:
         assert response.status_code == 400
         assert "update your skills" in response.data["detail"].lower()
 
+@pytest.mark.django_db
+class TestSavedJobViewSet:
+
+    def test_list_only_user_saved_jobs(
+        self, auth_client, user, job
+    ):
+        """List only saved job by the authenticated user"""
+        models.SavedJob.objects.create(user=user, job=job)
+
+        response = auth_client.get(reverse("saved-job-list"))
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+        assert response.data[0]["job"] == job.id
+
+    def test_create_saved_job(
+        self, auth_client, user, job
+    ):
+        """Create saved jobs by the authenticated user"""
+        response = auth_client.post(
+            reverse("saved-job-list"),
+            {"job": job.id},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert models.SavedJob.objects.count() == 1
+
+        saved_job = models.SavedJob.objects.first()
+        assert saved_job.user == user
+        assert saved_job.job == job
+
+    def test_remove_saved_job_success(
+        self, auth_client, user, job
+    ):
+        """Remove respective saved job by the user"""
+        models.SavedJob.objects.create(user=user, job=job)
+
+        response = auth_client.delete(
+            reverse("saved-job-remove"),
+            {"job": job.id},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert models.SavedJob.objects.count() == 0
+
+    def test_remove_saved_job_not_found(
+        self, auth_client, job
+    ):
+        """Fallback if Saved Job does not exist"""
+        response = auth_client.delete(
+            reverse("saved-job-remove"),
+            {"job": job.id},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_remove_saved_job_missing_job_id(
+        self, auth_client
+    ):
+        """Remove Saved Job with Missing Id"""
+        response = auth_client.delete(
+            reverse("saved-job-remove"),
+            {},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_requires_authentication(self, client, job):
+        """Authentication check"""
+        response = client.get(reverse("saved-job-list"))
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED

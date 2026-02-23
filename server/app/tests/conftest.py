@@ -1,5 +1,6 @@
 import pytest
 from pathlib import Path
+from django.urls import reverse
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from api.serializer import UserSerializer
@@ -77,3 +78,11 @@ def job():
         description="APIs",
         requirements=[]
     )
+
+@pytest.fixture
+def saved_job_url():
+    return reverse("saved-job-list")
+
+@pytest.fixture
+def remove_saved_job_url():
+    return reverse("saved-job-remove")
