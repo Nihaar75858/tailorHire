@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
-from .models import CustomUser, Job
+from .models import CustomUser, Job, SavedJob
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -75,3 +75,11 @@ class JobListSerializer(serializers.ModelSerializer):
         model = Job
         fields = ['id', 'title', 'company', 'location', 'salary_min', 'salary_max', 
                   'job_type', 'description', 'requirements', 'posted_by_name', 'created_at']
+        
+class SavedJobSerializer(serializers.ModelSerializer):
+    job_details = JobListSerializer(source='job', read_only=True)
+    
+    class Meta:
+        model = SavedJob
+        fields = ['id', 'job', 'job_details', 'saved_at']
+        read_only_fields = ['user', 'saved_at']
