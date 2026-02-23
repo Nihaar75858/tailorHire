@@ -27,6 +27,7 @@ beforeEach(() => {
   localStorageMock.clear.mockClear();
 });
 
+// Register 
 test('loads token from localStorage on init', async () => {
   // Mock localStorage to return a token
   localStorageMock.getItem.mockReturnValue('abc123');
@@ -46,6 +47,7 @@ test('setToken stores token in memory and localStorage', () => {
   expect(localStorageMock.setItem).toHaveBeenCalledWith('accessToken', 'xyz');
 });
 
+// Logout
 test('clearToken removes token from memory and storage', () => {
   ApiService.setToken('xyz');
 
@@ -128,6 +130,7 @@ test('throws on network failure', async () => {
     .toThrow('Network down');
 });
 
+// Jobs
 test('getJobs builds query string correctly', async () => {
   fetch.mockResolvedValue({
     ok: true,
@@ -170,6 +173,7 @@ test('getJob calls correct endpoint', async () => {
   );
 });
 
+// Logout
 test('logout clears token', async () => {
   ApiService.setToken('abc');
 
@@ -179,3 +183,37 @@ test('logout clears token', async () => {
   expect(localStorageMock.removeItem).toHaveBeenCalledWith('accessToken')
 });
 
+// Saved Jobs 
+describe('SavedJob API', () => {
+  beforeEach(() => {
+    vi.spyOn(ApiService, 'request').mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test('saveJob calls correct endpoint with POST', async () => {
+    await ApiService.saveJob(5);
+
+    expect(ApiService.request).toHaveBeenCalledWith('/saved-jobs/', {
+      method: 'POST',
+      body: JSON.stringify({ job: 5 }),
+    });
+  });
+
+  test('getSavedJobs calls correct endpoint', async () => {
+    await ApiService.getSavedJobs();
+
+    expect(ApiService.request).toHaveBeenCalledWith('/saved-jobs/');
+  });
+
+  test('removeSavedJob calls correct endpoint with DELETE', async () => {
+    await ApiService.removeSavedJob(10);
+
+    expect(ApiService.request).toHaveBeenCalledWith('/saved-jobs/remove/', {
+      method: 'DELETE',
+      body: JSON.stringify({ job: 10 }),
+    });
+  });
+});
