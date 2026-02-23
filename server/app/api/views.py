@@ -105,3 +105,34 @@ class JobViewSet(viewsets.ModelViewSet):
         
         serializer = JobListSerializer(recommended_jobs, many=True)
         return Response(serializer.data)
+    
+class SavedJobViewSet(viewsets.ModelViewSet):
+    serializer_class = SavedJobSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return SavedJob.objects.filter(user=self.request.user)
+    
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+    
+    @action(detail=False, methods=['delete'])
+    def remove(self, request):
+        """Remove saved job"""
+        job_id = request.data.get('job')
+        
+        if not job_id:
+            return Response(
+                {"detail": "Job ID is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            saved_job = SavedJob.objects.get(user=request.user, job_id=job_id)
+            saved_job.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except SavedJob.DoesNotExist:
+            return Response(
+                {"detail": "Saved job not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
