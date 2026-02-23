@@ -1,8 +1,9 @@
 import pytest
+import django.db
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth.models import Group, Permission
-from api.models import CustomUser, Job
-from api.serializer import UserSerializer, JobSerializer, JobListSerializer
+from api.models import CustomUser, Job, SavedJob
+from api.serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJobSerializer
 
 #########################
 # User Serializer Tests
@@ -174,3 +175,85 @@ def test_job_list_serializer_fields():
 
     assert set(data.keys()) == expected_fields
     
+#########################
+# Saved Job Serializer Tests
+#########################
+@pytest.mark.django_db
+def test_savedjob_serializer_create(user, job):
+    serializer = SavedJobSerializer(
+        data={"job": job.id},
+        context={"request": None}
+    )
+
+    assert serializer.is_valid(), serializer.errors
+
+    # user must be injected manually since it's read-only
+    saved = serializer.save(user=user)
+
+    assert saved.user == user
+    assert saved.job == job
+    
+@pytest.mark.django_db
+def test_savedjob_serializer_user_read_only(user, job):
+    another_user = CustomUser.objects.create_user(
+        username="hacker",
+        password="test123",
+        email="hack@example.com",
+        firstName="Hack",
+        lastName="User"
+    )
+
+    serializer = SavedJobSerializer(
+        data={"job": job.id, "user": another_user.id}
+    )
+
+    assert serializer.is_valid(), serializer.errors
+
+    saved = serializer.save(user=user)
+
+    # Should not allow overriding user
+    assert saved.user == user
+    
+@pytest.mark.django_db
+def test_savedjob_serializer_saved_at_read_only(user, job):
+    serializer = SavedJobSerializer(
+        data={"job": job.id, "saved_at": "2000-01-01T00:00:00Z"}
+    )
+
+    assert serializer.is_valid(), serializer.errors
+
+    saved = serializer.save(user=user)
+
+    assert saved.saved_at is not None
+    
+@pytest.mark.django_db
+def test_savedjob_serializer_job_details(user, job):
+    saved = SavedJob.objects.create(user=user, job=job)
+
+    serializer = SavedJobSerializer(saved)
+    data = serializer.data
+
+    assert "job_details" in data
+    assert data["job_details"]["title"] == job.title
+    assert data["job_details"]["company"] == job.company
+
+@pytest.mark.django_db
+def test_savedjob_serializer_duplicate(user, job):
+    SavedJob.objects.create(user=user, job=job)
+
+    serializer = SavedJobSerializer(data={"job": job.id})
+    assert serializer.is_valid(), serializer.errors
+
+    with pytest.raises(django.db.utils.IntegrityError):
+        serializer.save(user=user)
+        
+@pytest.mark.django_db
+def test_savedjob_serializer_fields(user, job):
+    saved = SavedJob.objects.create(user=user, job=job)
+
+    serializer = SavedJobSerializer(saved)
+    data = serializer.data
+
+    expected_fields = {"id", "job", "job_details", "saved_at"}
+
+    assert set(data.keys()) == expected_fields
