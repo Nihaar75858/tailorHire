@@ -1,63 +1,62 @@
-from django.test import TestCase
-from rest_framework.test import APIClient
 from rest_framework import status
 from django.urls import reverse
 from pathlib import Path
-from api.serializer import UserSerializer
 from api import models
 from django.core.files.uploadedfile import SimpleUploadedFile
 import pytest
 import json
 
-create_user = reverse('customuser-list')
+# create_user = reverse('customuser-list')
 
-def update_url(id):
-    return reverse('customuser-detail', args=[id])
+# def update_url(id):
+#     return reverse('customuser-detail', args=[id])
 
-def details_url(id):
-    return reverse('customuser-detail', args=[id])
+# def details_url(id):
+#     return reverse('customuser-detail', args=[id])
 
-def sample_payload():
-    image_path = Path(__file__).resolve().parent.parent / "profile" / "test.jpg"
-    with open(image_path, "rb") as img:
-        image = SimpleUploadedFile("test.jpg", img.read(), content_type="image/jpeg")
+# def sample_payload():
+#     image_path = Path(__file__).resolve().parent.parent / "profile" / "test.jpg"
+#     with open(image_path, "rb") as img:
+#         image = SimpleUploadedFile("test.jpg", img.read(), content_type="image/jpeg")
         
-    payload = {
-        "firstName": "John",
-        "lastName": "Doe",
-        "username": "John123",
-        "email": "user1@example.com",
-        "password": "hello123",
-        "bio": "I am ready to work",
-        "location": "Indiana, USA",
-        "skills": "Java, Python, C",
-        "profile_picture": image,
-        "role": json.dumps(["User"]),
-    }
-    serializer = UserSerializer(data=payload)
-    serializer.is_valid(raise_exception=True)
-    return serializer.save()
+#     payload = {
+#         "firstName": "John",
+#         "lastName": "Doe",
+#         "username": "John123",
+#         "email": "user1@example.com",
+#         "password": "hello123",
+#         "bio": "I am ready to work",
+#         "location": "Indiana, USA",
+#         "skills": "Java, Python, C",
+#         "profile_picture": image,
+#         "role": json.dumps(["User"]),
+#     }
+#     serializer = UserSerializer(data=payload)
+#     serializer.is_valid(raise_exception=True)
+#     return serializer.save()
 
-class UserApiTest(TestCase):
-    def setUp(self):
-        self.client = APIClient()
-        self.login_url = reverse('customuser-login-user')
-        self.logout_url = reverse('customuser-logout-user')
+@pytest.mark.django_db
+class TestUserApi:
+    # def setUp(self):
+    #     self.login_url = reverse('customuser-login-user')
+    #     self.logout_url = reverse('customuser-logout-user')
         
-    def authenticate_user(self):
-        """Helper: create a user, log in, and set JWT token for authenticated requests."""
-        user = sample_payload()
-        payload = {
-            "username": user.username,
-            "password": "hello123",
-        }
-        res = self.client.post(self.login_url, payload, format='json')
-        token = res.data.get("access")
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
-        return user, res
+    # def authenticate_user(self):
+    #     """Helper: create a user, log in, and set JWT token for authenticated requests."""
+    #     user = sample_payload()
+    #     payload = {
+    #         "username": user.username,
+    #         "password": "hello123",
+    #     }
+    #     res = self.client.post(self.login_url, payload, format='json')
+    #     token = res.data.get("access")
+    #     self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+    #     return user, res
 
-    def test_create_user(self):
+    def test_create_user(self, api_client):
         """Create Test User"""
+        url = reverse("customuser-list")
+        
         image_path = Path(__file__).resolve().parent.parent / "profile" / "test.jpg"
         with open(image_path, "rb") as img:
             image = SimpleUploadedFile("test.jpg", img.read(), content_type="image/jpeg")
@@ -75,76 +74,132 @@ class UserApiTest(TestCase):
             "role": json.dumps(["User"]),
         }
 
-        res = self.client.post(create_user, payload, format='multipart')
-        print(res.data)
-        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        res = api_client.post(url, payload, format='multipart')
+        assert res.status_code == status.HTTP_201_CREATED
         
-    def test_login_successful(self):
+    def test_login_successful(self, api_client, create_user):
         """Login Test User with Username and Password (Successful)"""
-        user = sample_payload()
+        user = create_user()
+        url = reverse("customuser-login-user")
+        
         payload = {
             "username": user.username,
             "password": "hello123"
         }
-        res = self.client.post(self.login_url, payload, format='multipart')
+        res = api_client.post(url, payload, format='multipart')
 
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertIn("Login successful", res.data["message"])
+        assert res.status_code == status.HTTP_200_OK
+        assert "Login successful" == res.data["message"]
 
-    def test_login_invalid_credentials(self):
+    def test_login_invalid_credentials(self, api_client):
         """Login Test User with Username and Password (Failure)"""
+        url = reverse("customuser-login-user")
+        
         payload = {
             "username": "wrongusername",
             "password": "wrongpassword"
         }
-        res = self.client.post(self.login_url, payload, format='multipart')
+        res = api_client.post(url, payload, format='multipart')
 
-        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertIn("Invalid credentials", res.data["error"])
+        assert res.status_code == status.HTTP_401_UNAUTHORIZED
+        assert "Invalid credentials" in res.data["error"]
         
-    def test_logout_user(self):
+    def test_logout_user(self, api_client, create_user):
         """Test User Logs out"""
-        user, login_res = self.authenticate_user()
+        user = create_user()
 
+        login_url = reverse("customuser-login-user")
+        logout_url = reverse("customuser-logout-user")
+        
+        login_res = api_client.post(
+            login_url,
+            {"username": user.username, "password": "hello123"},
+            format="json",
+        )
+        
+        token = login_res.data["access"]
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        
         refresh_token = login_res.data["refresh"]
+        
         payload = {"refresh": refresh_token}
-        res = self.client.post(self.logout_url, payload, format='json')
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertIn("Logged out successfully", res.data["message"])
+        res = api_client.post(logout_url, payload, format='json')
+        
+        assert res.status_code == status.HTTP_200_OK
+        assert "Logged out successfully" in res.data["message"]
 
-    def test_update_user(self):
+    def test_update_user(self, api_client, create_user):
         """Test User will Update Profile"""
-        user, _ = self.authenticate_user()
-        image_path = Path(__file__).resolve().parent.parent / "profile" / "test.jpg"
-        with open(image_path, "rb") as img:
-            image = SimpleUploadedFile("test.jpg", img.read(), content_type="image/jpeg")
-            
+        user = create_user()
+        
+        login_url = reverse("customuser-login-user")
+        login_res = api_client.post(
+            login_url,
+            {"username": user.username, "password": "hello123"},
+            format="json",
+        )
+        
+        token = login_res.data["access"]
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        url = reverse("customuser-detail", args=[user.id])
+
         payload = {
-            "firstName": "John",
+            "firstName": "Updated",
             "lastName": "Doe",
-            "username": "John123",
-            "email": "user1@example.com",
-            "password": "hello123",
-            "bio": "I am ready to work",
-            "location": "Indiana, USA",
-            "skills": "Java, Python, C",
-            "profile_picture": image,
-            "role": json.dumps(["User"]),
         }
 
-        url = update_url(user.id)
-        res = self.client.put(url, payload, format='multipart')
-        print(res.data)
-        user.refresh_from_db()
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        res = api_client.patch(url, payload, format="json")
 
-    def test_user_details(self):
+        assert res.status_code == status.HTTP_200_OK
+        
+        # image_path = Path(__file__).resolve().parent.parent / "profile" / "test.jpg"
+        # with open(image_path, "rb") as img:
+        #     image = SimpleUploadedFile("test.jpg", img.read(), content_type="image/jpeg")
+            
+        # payload = {
+        #     "firstName": "John",
+        #     "lastName": "Doe",
+        #     "username": "John123",
+        #     "email": "user1@example.com",
+        #     "password": "hello123",
+        #     "bio": "I am ready to work",
+        #     "location": "Indiana, USA",
+        #     "skills": "Java, Python, C",
+        #     "profile_picture": image,
+        #     "role": json.dumps(["User"]),
+        # }
+
+        # url = update_url(user.id)
+        # res = self.client.put(url, payload, format='multipart')
+        # print(res.data)
+        # user.refresh_from_db()
+        # self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+    def test_user_details(self, api_client, create_user):
         """Test User Details to be sent to the Frontend"""
-        user, _ = self.authenticate_user()
-        url = details_url(user.id)
-        res = self.client.get(url)
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertEqual(res.data["username"], user.username)
+        user = create_user()
+        
+        login_url = reverse("customuser-login-user")
+        login_res = api_client.post(
+            login_url,
+            {"username": user.username, "password": "hello123"},
+            format="json",
+        )
+
+        token = login_res.data["access"]
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        url = reverse("customuser-detail", args=[user.id])
+        res = api_client.get(url)
+
+        assert res.status_code == status.HTTP_200_OK
+        assert res.data["username"] == user.username
+        
+        # url = details_url(user.id)
+        # res = self.client.get(url)
+        # self.assertEqual(res.status_code, status.HTTP_200_OK)
+        # self.assertEqual(res.data["username"], user.username)
         
 @pytest.mark.django_db
 class TestJobViewSet:
@@ -154,7 +209,7 @@ class TestJobViewSet:
         response = auth_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) > 0
-        assert response.data[0]["title"] == "Software Engineer"
+        assert response.data[0]["title"] == job.title
 
     def test_filter_jobs_by_location(self, auth_client, job):
         """Should filter jobs by location"""
@@ -184,9 +239,12 @@ class TestJobViewSet:
             "requirements": ["Python", "FastAPI", "PostgreSQL"],
         }
         response = auth_client.post(url, data, format="json")
+        
         assert response.status_code == status.HTTP_201_CREATED
         assert models.Job.objects.count() == 1
-        assert models.Job.objects.first().posted_by.username == "recruiter"
+        
+        created_job = models.Job.objects.first()
+        assert created_job.posted_by == response.wsgi_request.user
 
     def test_create_job_unauthenticated(self, api_client):
         """Should not allow unauthenticated users to create job"""

@@ -1,7 +1,11 @@
 import pytest
+from pathlib import Path
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
+from api.serializer import UserSerializer
+from django.core.files.uploadedfile import SimpleUploadedFile
 from api.models import CustomUser, Job
+import json
 
 User = get_user_model()
 
@@ -12,6 +16,32 @@ def user(db):
 @pytest.fixture
 def api_client():
     return APIClient()
+
+@pytest.fixture
+def create_user():
+    def _create_user():
+        image_path = Path(__file__).resolve().parent.parent / "profile" / "test.jpg"
+        with open(image_path, "rb") as img:
+            image = SimpleUploadedFile("test.jpg", img.read(), content_type="image/jpeg")
+
+        payload = {
+            "firstName": "John",
+            "lastName": "Doe",
+            "username": "John123",
+            "email": "user1@example.com",
+            "password": "hello123",
+            "bio": "I am ready to work",
+            "location": "Indiana, USA",
+            "skills": "Java, Python, C",
+            "profile_picture": image,
+            "role": json.dumps(["User"]),
+        }
+
+        serializer = UserSerializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        return serializer.save()
+
+    return _create_user
 
 @pytest.fixture
 def auth_client(user):
@@ -37,7 +67,6 @@ def user():
         username="testuser",
         password="test123"
     )
-
 
 @pytest.fixture
 def job():
