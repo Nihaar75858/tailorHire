@@ -65,6 +65,25 @@ export class ApiService {
   async getJob(id) {
     return this.request(`/jobs/${id}/`);
   }
+
+  // Saved Jobs endpoints
+  async saveJob(jobId) {
+    return this.request('/saved-jobs/', {
+      method: 'POST',
+      body: JSON.stringify({ job: jobId }),
+    });
+  }
+
+  async getSavedJobs() {
+    return this.request('/saved-jobs/');
+  }
+
+  async removeSavedJob(jobId) {
+    return this.request('/saved-jobs/remove/', {
+      method: 'DELETE',
+      body: JSON.stringify({ job: jobId }),
+    });
+  }
 }
 
 export default new ApiService();
