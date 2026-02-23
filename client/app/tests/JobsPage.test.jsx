@@ -193,6 +193,7 @@ test('calls apply handler', async () => {
 test('calls save handler', async () => {
   const user = userEvent.setup();
   window.alert = vi.fn();
+  api.saveJob = vi.fn().mockResolvedValue({});
 
   useJobs.mockReturnValue({
     jobs: mockJobs,
@@ -203,6 +204,8 @@ test('calls save handler', async () => {
   render(<JobsPage />);
 
   await user.click(screen.getAllByText(/save/i)[0]);
+
+  expect(api.saveJob).toHaveBeenCalledWith(1);
 
   expect(window.alert).toHaveBeenCalledWith(
     expect.stringContaining('Saved')

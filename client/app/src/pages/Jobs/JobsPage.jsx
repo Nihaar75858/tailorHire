@@ -46,8 +46,13 @@ const JobsPage = () => {
     console.log("Thank you for applying. We'll get back to you soon.")
   };
 
-  const handleSave = (job) => {
-    alert(`Saved ${job.title}`);
+  const handleSave = async (job) => {
+    try {
+      await api.saveJob(job.id);
+      alert(`Saved ${job.title}`);
+    } catch (err) {
+      alert('Save failed: ' + err.message);
+    }
   };
 
   if (loading) {
