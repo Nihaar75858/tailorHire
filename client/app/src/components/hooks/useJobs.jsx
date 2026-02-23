@@ -10,7 +10,7 @@ export const useJobs = () => {
     const fetchJobs = async () => {
       try {
         const data = await api.getJobs();
-        setJobs(data);
+        setJobs(data.results || data);
         setLoading(false);
       } catch (err) {
         setError(err.message);
