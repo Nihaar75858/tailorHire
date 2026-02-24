@@ -2,8 +2,8 @@ import pytest
 import django.db
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth.models import Group, Permission
-from api.models import CustomUser, Job, SavedJob
-from api.serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJobSerializer
+from api.models import CustomUser, Job, SavedJob, CoverLetter
+from api.serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJobSerializer, CoverLetterSerializer
 
 #########################
 # User Serializer Tests
@@ -257,3 +257,95 @@ def test_savedjob_serializer_fields(user, job):
     expected_fields = {"id", "job", "job_details", "saved_at"}
 
     assert set(data.keys()) == expected_fields
+    
+#########################
+# Cover Letter Serializer Tests
+#########################
+@pytest.mark.django_db
+class TestCoverLetterSerializer:
+
+    def test_serialize_cover_letter(self):
+        """Should serialize all fields correctly"""
+        user = CustomUser.objects.create_user(username="john", password="pass123")
+
+        job = Job.objects.create(
+            title="Backend Dev",
+            company="ABC",
+            location="Remote",
+            salary_min=50000,
+            salary_max=70000,
+            job_type="Full-time",
+            description="Desc",
+            requirements="Req",
+            posted_by=user
+        )
+
+        letter = CoverLetter.objects.create(
+            user=user,
+            job=job,
+            job_description="Job desc",
+            resume_text="Resume",
+            generated_letter="Generated text"
+        )
+
+        serializer = CoverLetterSerializer(letter)
+        data = serializer.data
+
+        assert data["job"] == job.id
+        assert data["job_title"] == "Backend Dev"
+        assert data["job_description"] == "Job desc"
+        assert data["generated_letter"] == "Generated text"
+
+    def test_create_cover_letter_valid(self):
+        """Should validate creation payload (excluding read-only fields)"""
+        user = CustomUser.objects.create_user(username="create", password="pass123")
+
+        job = Job.objects.create(
+            title="Dev",
+            company="XYZ",
+            location="Remote",
+            salary_min=40000,
+            salary_max=60000,
+            job_type="Full-time",
+            description="Desc",
+            requirements="Req",
+            posted_by=user
+        )
+
+        payload = {
+            "job": job.id,
+            "job_description": "Some job desc",
+            "resume_text": "Resume text"
+        }
+
+        serializer = CoverLetterSerializer(data=payload)
+        assert serializer.is_valid()
+
+    def test_generated_letter_is_read_only(self):
+        """Should not allow client to set generated_letter"""
+        user = CustomUser.objects.create_user(username="readonly", password="pass123")
+
+        payload = {
+            "job_description": "Desc",
+            "generated_letter": "Hacked!"
+        }
+
+        serializer = CoverLetterSerializer(data=payload)
+
+        assert serializer.is_valid()
+        assert "generated_letter" not in serializer.validated_data
+
+    def test_user_is_read_only(self):
+        """User field should not be writable"""
+        user = CustomUser.objects.create_user(username="u1", email="u1@test.com", password="pass123")
+        other_user = CustomUser.objects.create_user(username="u2", email="u2@test.com", password="pass123")
+
+        payload = {
+            "user": other_user.id,
+            "job_description": "Desc"
+        }
+
+        serializer = CoverLetterSerializer(data=payload)
+
+        assert serializer.is_valid()
+        assert "user" not in serializer.validated_data
