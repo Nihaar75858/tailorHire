@@ -270,3 +270,123 @@ class TestSavedJobViewSet:
         """Authentication check"""
         response = client.get(reverse("saved-job-list"))
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        
+@pytest.mark.django_db
+class TestCoverLetterAPI:
+
+    def test_auth_required(self, api_client):
+        url = reverse("coverletter-list")
+        res = api_client.get(url)
+
+        assert res.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_create_cover_letter_success(
+        self, api_client, create_user, monkeypatch
+    ):
+        user = create_user()
+        api_client.force_authenticate(user=user)
+
+        url = reverse("coverletter-list")
+
+        # Mock AI
+        def mock_generate(*args, **kwargs):
+            return "Generated Letter"
+
+        monkeypatch.setattr(
+            "cover_letters.views.ai_helper.generate_cover_letter",
+            mock_generate
+        )
+
+        payload = {
+            "job_description": "Backend role",
+            "resume_text": "Python developer"
+        }
+
+        res = api_client.post(url, payload, format="json")
+
+        assert res.status_code == status.HTTP_201_CREATED
+        assert res.data["generated_letter"] == "Generated Letter"
+        assert models.CoverLetter.objects.count() == 1
+        assert models.CoverLetter.objects.first().user == user
+
+    def test_missing_job_description_returns_400(
+        self, api_client, create_user
+    ):
+        user = create_user()
+        api_client.force_authenticate(user=user)
+
+        url = reverse("coverletter-list")
+
+        payload = {
+            "resume_text": "Python developer"
+        }
+
+        res = api_client.post(url, payload, format="json")
+
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Job description is required" in str(res.data)
+
+    def test_user_sees_only_their_cover_letters(
+        self, api_client, create_user
+    ):
+        user1 = create_user(username="u1", email="u1@test.com")
+        user2 = create_user(username="u2", email="u2@test.com")
+
+        models.CoverLetter.objects.create(
+            user=user1,
+            job_description="Desc1",
+            generated_letter="Letter1"
+        )
+
+        models.CoverLetter.objects.create(
+            user=user2,
+            job_description="Desc2",
+            generated_letter="Letter2"
+        )
+
+        api_client.force_authenticate(user=user1)
+        url = reverse("coverletter-list")
+        res = api_client.get(url)
+
+        assert res.status_code == status.HTTP_200_OK
+        assert len(res.data) == 1
+        assert res.data[0]["job_description"] == "Desc1"
+
+    def test_create_with_job_id(
+        self, api_client, create_user, monkeypatch
+    ):
+        user = create_user()
+        api_client.force_authenticate(user=user)
+
+        job = models.Job.objects.create(
+            title="Backend Dev",
+            company="ABC",
+            location="Remote",
+            salary_min=50000,
+            salary_max=70000,
+            job_type="Full-time",
+            description="Desc",
+            requirements="Req",
+            posted_by=user
+        )
+
+        def mock_generate(*args, **kwargs):
+            return "Generated Letter"
+
+        monkeypatch.setattr(
+            "cover_letters.views.ai_helper.generate_cover_letter",
+            mock_generate
+        )
+
+        url = reverse("coverletter-list")
+
+        payload = {
+            "job_description": "Backend role",
+            "resume_text": "Python dev",
+            "job": job.id
+        }
+
+        res = api_client.post(url, payload, format="json")
+
+        assert res.status_code == status.HTTP_201_CREATED
+        assert models.CoverLetter.objects.first().job == job

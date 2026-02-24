@@ -86,3 +86,15 @@ def saved_job_url():
 @pytest.fixture
 def remove_saved_job_url():
     return reverse("saved-job-remove")
+
+@pytest.fixture
+def create_user():
+    def _create_user(**params):
+        defaults = {
+            "username": "testuser",
+            "email": "test@test.com",
+            "password": "pass123"
+        }
+        defaults.update(params)
+        return User.objects.create_user(**defaults)
+    return _create_user
