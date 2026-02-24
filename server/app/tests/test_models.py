@@ -250,3 +250,126 @@ def test_reverse_relationships(user, job):
     assert job.saved_by.count() == 1
     assert user.saved_jobs.first() == saved
     assert job.saved_by.first() == saved
+
+#########################
+# Cover Letter Model Tests
+#########################
+@pytest.mark.django_db
+class TestCoverLetterModel:
+
+    def test_create_cover_letter(self):
+        """Should create a cover letter successfully"""
+        user = CustomUser.objects.create_user(
+            username="testuser",
+            password="pass123"
+        )
+
+        job = Job.objects.create(
+            title="Backend Dev",
+            company="ABC Corp",
+            location="Remote",
+            salary_min=50000,
+            salary_max=70000,
+            job_type="Full-time",
+            description="Backend role",
+            requirements="Python",
+            posted_by=user
+        )
+
+        cover_letter = CoverLetter.objects.create(
+            user=user,
+            job=job,
+            job_description="Backend role description",
+            resume_text="My resume text",
+            generated_letter="Generated content"
+        )
+
+        assert cover_letter.user == user
+        assert cover_letter.job == job
+        assert cover_letter.generated_letter == "Generated content"
+
+    def test_str_representation(self):
+        """Should return readable string representation"""
+        user = CustomUser.objects.create_user(
+            username="john",
+            password="pass123"
+        )
+
+        cover_letter = CoverLetter.objects.create(
+            user=user,
+            job_description="Desc",
+            generated_letter="Letter"
+        )
+
+        assert str(cover_letter) == "Cover Letter for john"
+
+    def test_ordering_latest_first(self):
+        """Newest cover letter should come first"""
+        user = CustomUser.objects.create_user(
+            username="orderuser",
+            password="pass123"
+        )
+
+        older = CoverLetter.objects.create(
+            user=user,
+            job_description="Old",
+            generated_letter="Old Letter"
+        )
+
+        newer = CoverLetter.objects.create(
+            user=user,
+            job_description="New",
+            generated_letter="New Letter"
+        )
+
+        letters = CoverLetter.objects.all()
+        assert letters[0] == newer
+        assert letters[1] == older
+
+    def test_user_cascade_delete(self):
+        """Deleting user should delete cover letters"""
+        user = CustomUser.objects.create_user(
+            username="deleteuser",
+            password="pass123"
+        )
+
+        CoverLetter.objects.create(
+            user=user,
+            job_description="Desc",
+            generated_letter="Letter"
+        )
+
+        user.delete()
+
+        assert CoverLetter.objects.count() == 0
+
+    def test_job_set_null_on_delete(self):
+        """Deleting job should not delete cover letter"""
+        user = CustomUser.objects.create_user(
+            username="jobuser",
+            password="pass123"
+        )
+
+        job = Job.objects.create(
+            title="Dev",
+            company="XYZ",
+            location="Remote",
+            salary_min=40000,
+            salary_max=60000,
+            job_type="Full-time",
+            description="Desc",
+            requirements="Req",
+            posted_by=user
+        )
+
+        letter = CoverLetter.objects.create(
+            user=user,
+            job=job,
+            job_description="Desc",
+            generated_letter="Letter"
+        )
+
+        job.delete()
+        letter.refresh_from_db()
+
+        assert letter.job is None
