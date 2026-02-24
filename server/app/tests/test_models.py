@@ -1,6 +1,6 @@
 import pytest
 import django.db
-from api.models import CustomUser, Job, SavedJob
+from api.models import CustomUser, Job, SavedJob, CoverLetter
 from django.utils import timezone
 from decimal import Decimal
 

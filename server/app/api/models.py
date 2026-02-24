@@ -72,3 +72,17 @@ class SavedJob(models.Model):
 
     def __str__(self):
         return f"{self.user.username} saved {self.job.title}"
+    
+class CoverLetter(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='cover_letters')
+    job = models.ForeignKey(Job, on_delete=models.SET_NULL, null=True, blank=True)
+    job_description = models.TextField()
+    resume_text = models.TextField(blank=True, null=True)
+    generated_letter = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Cover Letter for {self.user.username}"
