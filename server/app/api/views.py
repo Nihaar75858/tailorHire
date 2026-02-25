@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from .models import CustomUser, Job, SavedJob
-from .serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJobSerializer
+from .models import CustomUser, Job, SavedJob, CoverLetter
+from .serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJobSerializer, CoverLetterSerializer
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -136,3 +136,58 @@ class SavedJobViewSet(viewsets.ModelViewSet):
                 {"detail": "Saved job not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
+            
+class CoverLetterViewSet(viewsets.ModelViewSet):
+    serializer_class = CoverLetterSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return CoverLetter.objects.filter(user=self.request.user)
+    
+    def create(self, request):
+        """Generate AI cover letter"""
+        job_description = request.data.get('job_description')
+        resume_text = request.data.get('resume_text', '')
+        job_id = request.data.get('job')
+        
+        if not job_description:
+            return Response(
+                {"detail": "Job description is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user = request.user
+        user_profile = {
+            'name': user.get_full_name() or user.username,
+            'skills': user.skills or '',
+            'bio': user.bio or ''
+        }
+        
+        # Generate cover letter
+        generated_letter = ai_helper.generate_cover_letter(
+            resume_text, 
+            job_description, 
+            user_profile
+        )
+        
+        # Save cover letter
+        cover_letter_data = {
+            'user': user.id,
+            'job_description': job_description,
+            'resume_text': resume_text,
+            'generated_letter': generated_letter
+        }
+        
+        if job_id:
+            cover_letter_data['job'] = job_id
+        
+        cover_letter = CoverLetter.objects.create(
+            user=user,
+            job_id=job_id if job_id else None,
+            job_description=job_description,
+            resume_text=resume_text,
+            generated_letter=generated_letter
+        )
+        
+        serializer = self.get_serializer(cover_letter)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

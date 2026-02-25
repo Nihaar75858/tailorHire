@@ -3,8 +3,11 @@ from django.urls import reverse
 from pathlib import Path
 from api import models
 from django.core.files.uploadedfile import SimpleUploadedFile
+from api.serializer import UserSerializer
 import pytest
 import json
+from .test_utils import HuggingFaceAI
+ai_helper = HuggingFaceAI()
 
 @pytest.mark.django_db
 class TestUserApi:
@@ -275,7 +278,7 @@ class TestSavedJobViewSet:
 class TestCoverLetterAPI:
 
     def test_auth_required(self, api_client):
-        url = reverse("coverletter-list")
+        url = reverse("cover-letter-list")
         res = api_client.get(url)
 
         assert res.status_code == status.HTTP_401_UNAUTHORIZED
@@ -286,14 +289,14 @@ class TestCoverLetterAPI:
         user = create_user()
         api_client.force_authenticate(user=user)
 
-        url = reverse("coverletter-list")
+        url = reverse("cover-letter-list")
 
         # Mock AI
         def mock_generate(*args, **kwargs):
             return "Generated Letter"
 
         monkeypatch.setattr(
-            "cover_letters.views.ai_helper.generate_cover_letter",
+            "api.views.ai_helper.generate_cover_letter",
             mock_generate
         )
 
@@ -315,7 +318,7 @@ class TestCoverLetterAPI:
         user = create_user()
         api_client.force_authenticate(user=user)
 
-        url = reverse("coverletter-list")
+        url = reverse("cover-letter-list")
 
         payload = {
             "resume_text": "Python developer"
@@ -345,7 +348,7 @@ class TestCoverLetterAPI:
         )
 
         api_client.force_authenticate(user=user1)
-        url = reverse("coverletter-list")
+        url = reverse("cover-letter-list")
         res = api_client.get(url)
 
         assert res.status_code == status.HTTP_200_OK
@@ -374,11 +377,11 @@ class TestCoverLetterAPI:
             return "Generated Letter"
 
         monkeypatch.setattr(
-            "cover_letters.views.ai_helper.generate_cover_letter",
+            "api.views.ai_helper.generate_cover_letter",
             mock_generate
         )
 
-        url = reverse("coverletter-list")
+        url = reverse("cover-letter-list")
 
         payload = {
             "job_description": "Backend role",
