@@ -217,3 +217,22 @@ describe('SavedJob API', () => {
     });
   });
 });
+
+describe("Cover Letter API", () => {
+  test("generateCoverLetter calls correct endpoint with POST", async () => {
+    const mockData = { jobId: 1, content: "Test" };
+
+    await ApiService.generateCoverLetter(mockData);
+
+    expect(ApiService.request).toHaveBeenCalledWith("/cover-letters/", {
+      method: "POST",
+      body: JSON.stringify(mockData),
+    });
+  });
+
+  test("getCoverLetters calls correct endpoint", async () => {
+    await ApiService.getCoverLetters();
+
+    expect(ApiService.request).toHaveBeenCalledWith("/cover-letters/");
+  });
+});
