@@ -39,12 +39,12 @@ export class ApiService {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('API Error:', errorData);
+        console.error("API Error:", errorData);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('✅ API Data:', data);
+      console.log("✅ API Data:", data);
       return data;
     } catch (error) {
       console.error("API request failed:", error);
@@ -68,21 +68,32 @@ export class ApiService {
 
   // Saved Jobs endpoints
   async saveJob(jobId) {
-    return this.request('/saved-jobs/', {
-      method: 'POST',
+    return this.request("/saved-jobs/", {
+      method: "POST",
       body: JSON.stringify({ job: jobId }),
     });
   }
 
   async getSavedJobs() {
-    return this.request('/saved-jobs/');
+    return this.request("/saved-jobs/");
   }
 
   async removeSavedJob(jobId) {
-    return this.request('/saved-jobs/remove/', {
-      method: 'DELETE',
+    return this.request("/saved-jobs/remove/", {
+      method: "DELETE",
       body: JSON.stringify({ job: jobId }),
     });
+  }
+
+  // Cover letter endpoints
+  async generateCoverLetter(data) {
+    return this.request("/cover-letters/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+  async getCoverLetters() {
+    return this.request("/cover-letters/");
   }
 }
 

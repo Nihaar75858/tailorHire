@@ -219,6 +219,14 @@ describe('SavedJob API', () => {
 });
 
 describe("Cover Letter API", () => {
+  beforeEach(() => {
+    vi.spyOn(ApiService, 'request').mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   test("generateCoverLetter calls correct endpoint with POST", async () => {
     const mockData = { jobId: 1, content: "Test" };
 
