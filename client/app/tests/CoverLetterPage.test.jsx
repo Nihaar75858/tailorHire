@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  render,
-  screen,
-  fireEvent,
-  act,
-} from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { test, expect, vi, beforeEach } from "vitest";
 import CoverLetterPage from "../src/pages/CoverLetter/CoverLetterPage";
 
@@ -24,6 +19,15 @@ vi.mock("../src/components/hooks/useAuth", () => ({
   }),
 }));
 
+vi.mock("../src/services/api", () => ({
+  default: {
+    generateCoverLetter: vi.fn(),
+    getCoverLetters: vi.fn(),
+  },
+}));
+
+import api from "../src/services/api";
+
 // Mock clipboard and alert
 Object.assign(navigator, {
   clipboard: {
@@ -32,90 +36,96 @@ Object.assign(navigator, {
 });
 global.alert = vi.fn();
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  // Use fake timers
-  vi.useFakeTimers();
-});
+test("renders backend generated content", async () => {
+  api.generateCoverLetter.mockResolvedValue({
+    generated_letter: "React experience mentioned here",
+  });
 
-afterEach(() => {
-  // Restore real timers
-  vi.useRealTimers();
-});
+  api.getCoverLetters.mockResolvedValue([]);
 
-test("renders cover letter generator page", () => {
   render(<CoverLetterPage />);
 
-  expect(screen.getByText("AI Cover Letter Generator")).toBeInTheDocument();
-  expect(
+  fireEvent.change(
     screen.getByPlaceholderText("Paste the job description here..."),
-  ).toBeInTheDocument();
+    { target: { value: "Software Engineer role" } },
+  );
+
+  fireEvent.click(screen.getByText("Generate Cover Letter"));
+
+  expect(await screen.findByText(/React experience/)).toBeInTheDocument();
 });
 
-test("shows alert when trying to generate without job description", () => {
+test("shows alert when trying to generate without job description", async () => {
   render(<CoverLetterPage />);
 
   fireEvent.click(screen.getByText("Generate Cover Letter"));
+
+  await screen.findByText("AI Cover Letter Generator");
 
   expect(global.alert).toHaveBeenCalledWith("Please enter a job description");
 });
 
 test("generates cover letter after clicking generate", async () => {
+  api.generateCoverLetter.mockResolvedValue({
+    generated_letter:
+      "Dear Hiring Manager,\n\nJohn is great.\n\nSincerely,\nJohn",
+  });
+
+  api.getCoverLetters.mockResolvedValue([]);
+
   render(<CoverLetterPage />);
 
-  // Enter job description
   fireEvent.change(
     screen.getByPlaceholderText("Paste the job description here..."),
     { target: { value: "Software Engineer role" } },
   );
 
-  // Click generate
   fireEvent.click(screen.getByText("Generate Cover Letter"));
 
-  // Check loading state
-  expect(screen.getByText("Generating...")).toBeInTheDocument();
+  expect(screen.getByText("Generating with AI...")).toBeInTheDocument();
 
-  // Advance timers inside act so React flushes state updates
-  await act(async () => {
-    vi.advanceTimersByTime(1500);
-  });
+  expect(await screen.findByText("Generated Cover Letter")).toBeInTheDocument();
 
-  // Check that user's name appears in the letter
-  expect(screen.getByText("Generated Cover Letter")).toBeInTheDocument();
   expect(screen.getByText(/John/)).toBeInTheDocument();
+
+  expect(api.generateCoverLetter).toHaveBeenCalledWith({
+    job_description: "Software Engineer role",
+    resume_text: "",
+  });
 });
 
 test("copies to clipboard", async () => {
+  api.generateCoverLetter.mockResolvedValue({
+    generated_letter: "Test letter content",
+  });
+
+  api.getCoverLetters.mockResolvedValue([]);
+
   render(<CoverLetterPage />);
 
-  // Enter job description
   fireEvent.change(
     screen.getByPlaceholderText("Paste the job description here..."),
     { target: { value: "Software Engineer role" } },
   );
 
-  // Generate letter
   fireEvent.click(screen.getByText("Generate Cover Letter"));
 
-  // Fast-forward timers
-  await act(async () => {
-    vi.advanceTimersByTime(1500);
-  });
+  await screen.findByText("Copy to Clipboard");
 
-  // Wait for copy button to appear
-  expect(screen.getByText("Copy to Clipboard")).toBeInTheDocument();
-
-  // Click copy
   fireEvent.click(screen.getByText("Copy to Clipboard"));
 
-  // Verify clipboard was called
-  expect(navigator.clipboard.writeText).toHaveBeenCalled();
-  expect(global.alert).toHaveBeenCalledWith(
-    "Cover letter copied to clipboard!",
+  expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+    "Test letter content",
   );
 });
 
-test("includes user skills in generated letter", async () => {
+test("renders generated letter from backend", async () => {
+  api.generateCoverLetter.mockResolvedValue({
+    generated_letter: "This letter highlights React and Node.js experience.",
+  });
+
+  api.getCoverLetters.mockResolvedValue([]);
+
   render(<CoverLetterPage />);
 
   fireEvent.change(
@@ -125,18 +135,22 @@ test("includes user skills in generated letter", async () => {
 
   fireEvent.click(screen.getByText("Generate Cover Letter"));
 
-  await act(async () => {
-    vi.advanceTimersByTime(1500);
-  });
+  // Wait for async render
+  expect(await screen.findByText("Generated Cover Letter")).toBeInTheDocument();
 
-  expect(screen.getByText("Generated Cover Letter")).toBeInTheDocument();
-
-  // Check that skills appear in the letter
-  const letterContent = screen.getByText(/React/).textContent;
-  expect(letterContent).toContain("React");
+  expect(screen.getByText(/React and Node.js experience/)).toBeInTheDocument();
 });
 
-test("button is disabled while generating", () => {
+test("button is disabled while generating", async () => {
+  let resolvePromise;
+
+  const mockPromise = new Promise((resolve) => {
+    resolvePromise = resolve;
+  });
+
+  api.generateCoverLetter.mockResolvedValue(mockPromise);
+  api.getCoverLetters.mockResolvedValue([]);
+
   render(<CoverLetterPage />);
 
   fireEvent.change(
@@ -144,9 +158,33 @@ test("button is disabled while generating", () => {
     { target: { value: "Software Engineer role" } },
   );
 
-  const button = screen.getByText("Generate Cover Letter");
+  const button = screen.getByRole("button", {
+    name: "Generate Cover Letter",
+  });
+
   fireEvent.click(button);
 
   expect(button).toBeDisabled();
-  expect(screen.getByText("Generating...")).toBeInTheDocument();
+  expect(button).toHaveTextContent("Generating with AI...");
+
+  // Resolve the promise to finish
+  resolvePromise({ generated_letter: "Test letter" });
+
+  await screen.findByText("Generated Cover Letter");
+});
+
+test("shows error if API fails", async () => {
+  api.generateCoverLetter.mockRejectedValue(new Error("API failed"));
+  api.getCoverLetters.mockResolvedValue([]);
+
+  render(<CoverLetterPage />);
+
+  fireEvent.change(
+    screen.getByPlaceholderText("Paste the job description here..."),
+    { target: { value: "Software Engineer role" } },
+  );
+
+  fireEvent.click(screen.getByText("Generate Cover Letter"));
+
+  expect(await screen.findByText("API failed")).toBeInTheDocument();
 });

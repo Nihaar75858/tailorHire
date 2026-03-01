@@ -6,6 +6,7 @@ import UserDashboard from "./pages/User/UserDashboard";
 import PublicDashBoard from "./pages/Public/PublicDashBoard";
 import JobsPage from "./pages/Jobs/JobsPage";
 import Navbar from "./components/Navbar/Navbar";
+import CoverLetterPage from "./pages/CoverLetter/CoverLetterPage";
 import "./App.css";
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/userdashboard" element={<UserDashboard />} />
         <Route path="/jobs" element={<JobsPage />} />
+        <Route path="/coverletter" element={<CoverLetterPage />}/>
       </Routes>
     </>
   );

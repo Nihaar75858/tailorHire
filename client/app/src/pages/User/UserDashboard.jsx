@@ -7,7 +7,7 @@ const cards = [
   {
     title: "Resume & Cover Letters",
     description: "Generate AI cover letters and job match scores.",
-    link: "/formwizard",
+    link: "/coverletter",
   },
   {
     title: "Job Postings",
