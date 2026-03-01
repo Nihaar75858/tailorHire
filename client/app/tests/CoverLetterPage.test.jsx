@@ -1,16 +1,26 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { test, expect, vi, beforeEach } from 'vitest';
-import CoverLetterPage from '../src/pages/CoverLetter/CoverLetterPage';
+import React from "react";
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+} from "@testing-library/react";
+import { test, expect, vi, beforeEach } from "vitest";
+import CoverLetterPage from "../src/pages/CoverLetter/CoverLetterPage";
 
 // Mock useAuth hook
-vi.mock('../../components/hooks/useAuth', () => ({
-  useAuth: () => ({
+vi.mock("../src/components/hooks/useAuth", () => ({
+  useUser: () => ({
     user: {
-      username: 'testuser',
-      first_name: 'John',
-      skills: 'React, JavaScript, Node.js',
+      username: "testuser",
+      first_name: "John",
+      last_name: "Doe",
+      email: "john@example.com",
+      skills: "React, JavaScript, Node.js",
+      role: ["User"],
     },
+    userType: "User",
+    setUser: vi.fn(),
   }),
 }));
 
@@ -33,108 +43,110 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-test('renders cover letter generator page', () => {
+test("renders cover letter generator page", () => {
   render(<CoverLetterPage />);
-  
-  expect(screen.getByText('AI Cover Letter Generator')).toBeInTheDocument();
-  expect(screen.getByPlaceholderText('Paste the job description here...')).toBeInTheDocument();
+
+  expect(screen.getByText("AI Cover Letter Generator")).toBeInTheDocument();
+  expect(
+    screen.getByPlaceholderText("Paste the job description here..."),
+  ).toBeInTheDocument();
 });
 
-test('shows alert when trying to generate without job description', () => {
+test("shows alert when trying to generate without job description", () => {
   render(<CoverLetterPage />);
-  
-  fireEvent.click(screen.getByText('Generate Cover Letter'));
-  
-  expect(global.alert).toHaveBeenCalledWith('Please enter a job description');
+
+  fireEvent.click(screen.getByText("Generate Cover Letter"));
+
+  expect(global.alert).toHaveBeenCalledWith("Please enter a job description");
 });
 
-test('generates cover letter after clicking generate', async () => {
+test("generates cover letter after clicking generate", async () => {
   render(<CoverLetterPage />);
 
   // Enter job description
   fireEvent.change(
-    screen.getByPlaceholderText('Paste the job description here...'),
-    { target: { value: 'Software Engineer role' } }
+    screen.getByPlaceholderText("Paste the job description here..."),
+    { target: { value: "Software Engineer role" } },
   );
 
   // Click generate
-  fireEvent.click(screen.getByText('Generate Cover Letter'));
+  fireEvent.click(screen.getByText("Generate Cover Letter"));
 
   // Check loading state
-  expect(screen.getByText('Generating...')).toBeInTheDocument();
+  expect(screen.getByText("Generating...")).toBeInTheDocument();
 
-  // Fast-forward timers
-  vi.advanceTimersByTime(1500);
-
-  // Wait for the generated letter to appear
-  await waitFor(() => {
-    expect(screen.getByText('Generated Cover Letter')).toBeInTheDocument();
+  // Advance timers inside act so React flushes state updates
+  await act(async () => {
+    vi.advanceTimersByTime(1500);
   });
 
   // Check that user's name appears in the letter
+  expect(screen.getByText("Generated Cover Letter")).toBeInTheDocument();
   expect(screen.getByText(/John/)).toBeInTheDocument();
 });
 
-test('copies to clipboard', async () => {
+test("copies to clipboard", async () => {
   render(<CoverLetterPage />);
 
   // Enter job description
   fireEvent.change(
-    screen.getByPlaceholderText('Paste the job description here...'),
-    { target: { value: 'Software Engineer role' } }
+    screen.getByPlaceholderText("Paste the job description here..."),
+    { target: { value: "Software Engineer role" } },
   );
 
   // Generate letter
-  fireEvent.click(screen.getByText('Generate Cover Letter'));
-  
-  // Fast-forward timers
-  vi.advanceTimersByTime(1500);
+  fireEvent.click(screen.getByText("Generate Cover Letter"));
 
-  // Wait for copy button to appear
-  await waitFor(() => {
-    expect(screen.getByText('Copy to Clipboard')).toBeInTheDocument();
+  // Fast-forward timers
+  await act(async () => {
+    vi.advanceTimersByTime(1500);
   });
 
+  // Wait for copy button to appear
+  expect(screen.getByText("Copy to Clipboard")).toBeInTheDocument();
+
   // Click copy
-  fireEvent.click(screen.getByText('Copy to Clipboard'));
+  fireEvent.click(screen.getByText("Copy to Clipboard"));
 
   // Verify clipboard was called
   expect(navigator.clipboard.writeText).toHaveBeenCalled();
-  expect(global.alert).toHaveBeenCalledWith('Cover letter copied to clipboard!');
+  expect(global.alert).toHaveBeenCalledWith(
+    "Cover letter copied to clipboard!",
+  );
 });
 
-test('includes user skills in generated letter', async () => {
+test("includes user skills in generated letter", async () => {
   render(<CoverLetterPage />);
 
   fireEvent.change(
-    screen.getByPlaceholderText('Paste the job description here...'),
-    { target: { value: 'Software Engineer role' } }
+    screen.getByPlaceholderText("Paste the job description here..."),
+    { target: { value: "Software Engineer role" } },
   );
 
-  fireEvent.click(screen.getByText('Generate Cover Letter'));
-  
-  vi.advanceTimersByTime(1500);
+  fireEvent.click(screen.getByText("Generate Cover Letter"));
 
-  await waitFor(() => {
-    expect(screen.getByText('Generated Cover Letter')).toBeInTheDocument();
+  await act(async () => {
+    vi.advanceTimersByTime(1500);
   });
+
+  expect(screen.getByText("Generated Cover Letter")).toBeInTheDocument();
 
   // Check that skills appear in the letter
   const letterContent = screen.getByText(/React/).textContent;
-  expect(letterContent).toContain('React');
+  expect(letterContent).toContain("React");
 });
 
-test('button is disabled while generating', () => {
+test("button is disabled while generating", () => {
   render(<CoverLetterPage />);
 
   fireEvent.change(
-    screen.getByPlaceholderText('Paste the job description here...'),
-    { target: { value: 'Software Engineer role' } }
+    screen.getByPlaceholderText("Paste the job description here..."),
+    { target: { value: "Software Engineer role" } },
   );
 
-  const button = screen.getByText('Generate Cover Letter');
+  const button = screen.getByText("Generate Cover Letter");
   fireEvent.click(button);
 
   expect(button).toBeDisabled();
-  expect(screen.getByText('Generating...')).toBeInTheDocument();
+  expect(screen.getByText("Generating...")).toBeInTheDocument();
 });
