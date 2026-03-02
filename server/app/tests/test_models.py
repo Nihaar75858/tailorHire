@@ -3,7 +3,6 @@ import django.db
 from api.models import CustomUser, Job, SavedJob, CoverLetter, Application
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
 from decimal import Decimal
 
 #########################
@@ -395,7 +394,7 @@ def test_user_cannot_apply_twice_to_same_job():
 
     Application.objects.create(user=user, job=job)
 
-    with pytest.raises(IntegrityError):
+    with pytest.raises(ValidationError):
         Application.objects.create(user=user, job=job)
         
 @pytest.mark.django_db
@@ -405,7 +404,7 @@ def test_invalid_status_raises_error():
 
     application = Application(user=user, job=job, status="invalid")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         application.full_clean()
 
 @pytest.mark.django_db

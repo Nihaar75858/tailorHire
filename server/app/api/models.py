@@ -86,3 +86,36 @@ class CoverLetter(models.Model):
 
     def __str__(self):
         return f"Cover Letter for {self.user.username}"
+    
+class Application(models.Model):
+    STATUS_CHOICES = [
+        ('applied', 'Applied'),
+        ('reviewing', 'Reviewing'),
+        ('interview', 'Interview'),
+        ('rejected', 'Rejected'),
+        ('accepted', 'Accepted'),
+    ]
+    
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='applications')
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='applications')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied')
+    cover_letter = models.TextField(blank=True, null=True)
+    resume = models.FileField(
+        upload_to='resumes/',
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(['pdf', 'doc', 'docx'])]
+    )
+    applied_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-applied_at']
+        unique_together = ['user', 'job']
+        
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.job.title}"
