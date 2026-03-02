@@ -1,7 +1,9 @@
 import pytest
 import django.db
-from api.models import CustomUser, Job, SavedJob, CoverLetter
-from django.utils import timezone
+from api.models import CustomUser, Job, SavedJob, CoverLetter, Application
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from decimal import Decimal
 
 #########################
@@ -373,3 +375,55 @@ class TestCoverLetterModel:
         letter.refresh_from_db()
 
         assert letter.job is None
+        
+#########################
+# Application Model Tests
+#########################
+@pytest.mark.django_db
+def test_application_defaults_to_applied():
+    user = CustomUser.objects.create_user(username="testuser")
+    job = Job.objects.create(title="Backend Dev", company="TestCo")
+
+    application = Application.objects.create(user=user, job=job)
+
+    assert application.status == "applied"
+
+@pytest.mark.django_db
+def test_user_cannot_apply_twice_to_same_job():
+    user = CustomUser.objects.create_user(username="testuser")
+    job = Job.objects.create(title="Backend Dev", company="TestCo")
+
+    Application.objects.create(user=user, job=job)
+
+    with pytest.raises(IntegrityError):
+        Application.objects.create(user=user, job=job)
+        
+@pytest.mark.django_db
+def test_invalid_status_raises_error():
+    user = CustomUser.objects.create_user(username="testuser")
+    job = Job.objects.create(title="Backend Dev", company="TestCo")
+
+    application = Application(user=user, job=job, status="invalid")
+
+    with pytest.raises(ValueError):
+        application.full_clean()
+
+@pytest.mark.django_db
+def test_resume_invalid_extension():
+    user = CustomUser.objects.create_user(username="testuser")
+    job = Job.objects.create(title="Backend Dev", company="TestCo")
+
+    invalid_file = SimpleUploadedFile(
+        "resume.txt",
+        b"file_content",
+        content_type="text/plain"
+    )
+
+    application = Application(
+        user=user,
+        job=job,
+        resume=invalid_file
+    )
+
+    with pytest.raises(ValidationError):
+        application.full_clean()
