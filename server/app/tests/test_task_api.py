@@ -9,6 +9,9 @@ import json
 from .test_utils import HuggingFaceAI
 ai_helper = HuggingFaceAI()
 
+#########################
+# User Views Tests
+#########################
 @pytest.mark.django_db
 class TestUserApi:
     def test_create_user(self, api_client):
@@ -130,7 +133,10 @@ class TestUserApi:
 
         assert res.status_code == status.HTTP_200_OK
         assert res.data["username"] == user.username
-        
+
+#########################
+# Job and JobList Views Tests
+#########################        
 @pytest.mark.django_db
 class TestJobViewSet:
     def test_list_jobs(self, auth_client, job):
@@ -198,6 +204,9 @@ class TestJobViewSet:
         assert response.status_code == 400
         assert "update your skills" in response.data["detail"].lower()
 
+#########################
+# Saved Job Views Tests
+#########################
 @pytest.mark.django_db
 class TestSavedJobViewSet:
 
@@ -273,7 +282,10 @@ class TestSavedJobViewSet:
         """Authentication check"""
         response = client.get(reverse("saved-job-list"))
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        
+
+#########################
+# Cover Letter Views Tests
+#########################
 @pytest.mark.django_db
 class TestCoverLetterAPI:
 
@@ -393,3 +405,132 @@ class TestCoverLetterAPI:
 
         assert res.status_code == status.HTTP_201_CREATED
         assert models.CoverLetter.objects.first().job == job
+        
+#########################
+# Application Views Tests
+#########################
+@pytest.mark.django_db
+def test_authentication_required(api_client):
+    response = api_client.get("/applications/")
+    assert response.status_code == 401
+    
+@pytest.mark.django_db
+def test_user_sees_only_their_applications(api_client):
+    user1 = models.CustomUser.objects.create_user(username="user1", password="pass")
+    user2 = models.CustomUser.objects.create_user(username="user2", password="pass")
+
+    job = models.Job.objects.create(title="Backend Dev", company="TestCo")
+
+    app1 = models.Application.objects.create(user=user1, job=job)
+    models.Application.objects.create(user=user2, job=job)
+
+    api_client.force_authenticate(user=user1)
+    response = api_client.get("/applications/")
+
+    assert response.status_code == 200
+    assert len(response.data) == 1
+    assert response.data[0]["id"] == app1.id
+    
+@pytest.mark.django_db
+def test_admin_sees_all_applications(api_client):
+    admin = models.CustomUser.objects.create_user(username="admin", password="pass", is_staff=True)
+    user = models.CustomUser.objects.create_user(username="user", password="pass")
+
+    job = models.Job.objects.create(title="Backend Dev", company="TestCo")
+
+    models.Application.objects.create(user=user, job=job)
+    models.Application.objects.create(user=admin, job=job)
+
+    api_client.force_authenticate(user=admin)
+    response = api_client.get("/applications/")
+
+    assert response.status_code == 200
+    assert len(response.data) == 2
+    
+@pytest.mark.django_db
+def test_user_can_create_application(api_client):
+    user = models.CustomUser.objects.create_user(username="user", password="pass")
+    job = models.Job.objects.create(title="Backend Dev", company="TestCo")
+
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post("/applications/", {
+        "job": job.id,
+        "status": "applied"
+    })
+
+    assert response.status_code == 201
+    assert models.Application.objects.count() == 1
+    assert models.Application.objects.first().user == user
+    
+@pytest.mark.django_db
+def test_duplicate_application_fails(api_client):
+    user = models.CustomUser.objects.create_user(username="user", password="pass")
+    job = models.Job.objects.create(title="Backend Dev", company="TestCo")
+
+    models.Application.objects.create(user=user, job=job)
+
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post("/applications/", {
+        "job": job.id,
+        "status": "applied"
+    })
+
+    assert response.status_code == 400
+    
+@pytest.mark.django_db
+def test_admin_can_update_status(api_client):
+    admin = models.CustomUser.objects.create_user(username="admin", password="pass", is_staff=True)
+    user = models.CustomUser.objects.create_user(username="user", password="pass")
+
+    job = models.Job.objects.create(title="Backend Dev", company="TestCo")
+    app = models.Application.objects.create(user=user, job=job)
+
+    api_client.force_authenticate(user=admin)
+
+    response = api_client.patch(
+        f"/applications/{app.id}/update_status/",
+        {"status": "interview"},
+        format="json"
+    )
+
+    assert response.status_code == 200
+    app.refresh_from_db()
+    assert app.status == "interview"
+    
+@pytest.mark.django_db
+def test_non_admin_cannot_update_status(api_client):
+    user = models.CustomUser.objects.create_user(username="user", password="pass")
+    job = models.Job.objects.create(title="Backend Dev", company="TestCo")
+    app = models.Application.objects.create(user=user, job=job)
+
+    api_client.force_authenticate(user=user)
+
+    response = api_client.patch(
+        f"/applications/{app.id}/update_status/",
+        {"status": "interview"},
+        format="json"
+    )
+
+    assert response.status_code == 403
+    
+@pytest.mark.django_db
+def test_invalid_status_rejected(api_client):
+    admin = models.CustomUser.objects.create_user(username="admin", password="pass", is_staff=True)
+    user = models.CustomUser.objects.create_user(username="user", password="pass")
+
+    job = models.Job.objects.create(title="Backend Dev", company="TestCo")
+    app = models.Application.objects.create(user=user, job=job)
+
+    api_client.force_authenticate(user=admin)
+
+    response = api_client.patch(
+        f"/applications/{app.id}/update_status/",
+        {"status": "invalid"},
+        format="json"
+    )
+
+    assert response.status_code == 400
+    
+    
