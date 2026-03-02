@@ -1,9 +1,9 @@
 import pytest
 import django.db
 from rest_framework.exceptions import ValidationError
-from django.contrib.auth.models import Group, Permission
-from api.models import CustomUser, Job, SavedJob, CoverLetter
-from api.serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJobSerializer, CoverLetterSerializer
+from django.contrib.auth.models import Group
+from api.models import CustomUser, Job, SavedJob, CoverLetter, Application
+from api.serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJobSerializer, CoverLetterSerializer, ApplicationSerializer
 
 #########################
 # User Serializer Tests
@@ -349,3 +349,89 @@ class TestCoverLetterSerializer:
 
         assert serializer.is_valid()
         assert "user" not in serializer.validated_data
+
+#########################
+# Application Serializer Tests
+#########################
+@pytest.mark.django_db
+def test_application_serializer_contains_extra_fields():
+    user = CustomUser.objects.create_user(username="testuser")
+    job = Job.objects.create(title="Backend Dev", company="TestCo")
+
+    application = Application.objects.create(user=user, job=job)
+
+    serializer = ApplicationSerializer(application)
+    data = serializer.data
+
+    assert "job_details" in data
+    assert "user_name" in data
+    assert data["user_name"] == "testuser"
+    
+@pytest.mark.django_db
+def test_user_is_read_only():
+    user = CustomUser.objects.create_user(username="testuser")
+    job = Job.objects.create(title="Backend Dev", company="TestCo")
+
+    data = {
+        "user": user.id,
+        "job": job.id,
+        "status": "applied",
+    }
+
+    serializer = ApplicationSerializer(data=data)
+
+    assert serializer.is_valid()
+    validated = serializer.validated_data
+
+    # user should NOT be present
+    assert "user" not in validated
+    
+@pytest.mark.django_db
+def test_valid_application_serializer_creates_instance():
+    user = CustomUser.objects.create_user(username="testuser")
+    job = Job.objects.create(title="Backend Dev", company="TestCo")
+
+    data = {
+        "job": job.id,
+        "status": "applied",
+    }
+
+    serializer = ApplicationSerializer(data=data)
+    assert serializer.is_valid(), serializer.errors
+
+    application = serializer.save(user=user)
+
+    assert application.user == user
+    assert application.job == job
+    
+@pytest.mark.django_db
+def test_invalid_status_fails():
+    job = Job.objects.create(title="Backend Dev", company="TestCo")
+
+    data = {
+        "job": job.id,
+        "status": "invalid",
+    }
+
+    serializer = ApplicationSerializer(data=data)
+
+    assert not serializer.is_valid()
+    assert "status" in serializer.errors
+    
+@pytest.mark.django_db
+def test_duplicate_application_fails():
+    user = CustomUser.objects.create_user(username="testuser")
+    job = Job.objects.create(title="Backend Dev", company="TestCo")
+
+    Application.objects.create(user=user, job=job)
+
+    data = {
+        "job": job.id,
+        "status": "applied",
+    }
+
+    serializer = ApplicationSerializer(data=data)
+    assert serializer.is_valid()
+
+    with pytest.raises(Exception):
+        serializer.save(user=user)
