@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import JobSearch from "../../components/jobs/JobSearch";
 import JobList from "../../components/jobs/JobList";
+import ApplicationModal from "../../components/applications/ApplicationModal";
 import { useJobs } from "../../components/hooks/useJobs";
 import api from "../../services/api";
 
@@ -11,6 +12,8 @@ const JobsPage = () => {
   const { jobs, loading, error } = useJobs();
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredJobs, setFilteredJobs] = useState([]);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [searching, setSearching] = useState(false);
 
   useEffect(() => {
@@ -32,22 +35,21 @@ const JobsPage = () => {
     } finally {
       setSearching(false);
     }
-
-    // const filtered = jobs.filter(
-    //   (job) =>
-    //     job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    //     job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    //     job.location.toLowerCase().includes(searchQuery.toLowerCase())
-    // );
-    // setFilteredJobs(filtered);
   };
 
-  const handleApply = async (job) => {
+  // Open modal to select cover letter
+  const handleApply = (job) => {
+    setSelectedJob(job);
+    setShowApplicationModal(true);
+  };
+
+  // Submit application with selected cover letter
+  const handleSubmitApplication = async (applicationData) => {
     try {
-      await api.applyToJob(job.id, {
-        cover_letter: 'I am interested in this position...'
-      });
-      alert(`Applied to ${job.title} at ${job.company}`);
+      await api.applyToJob(selectedJob.id, applicationData);
+      alert(`Successfully applied to ${selectedJob.title} at ${selectedJob.company}!`);
+      setShowApplicationModal(false);
+      setSelectedJob(null);
     } catch (err) {
       alert('Application failed: ' + err.message);
     }
@@ -99,6 +101,18 @@ const JobsPage = () => {
         onApply={handleApply}
         onSave={handleSave}
       />
+
+      {/* Application Modal */}
+      {showApplicationModal && (
+        <ApplicationModal
+          job={selectedJob}
+          onSubmit={handleSubmitApplication}
+          onClose={() => {
+            setShowApplicationModal(false);
+            setSelectedJob(null);
+          }}
+        />
+      )}
     </div>
   );
 };
