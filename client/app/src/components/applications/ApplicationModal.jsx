@@ -91,20 +91,20 @@ const ApplicationModal = ({ job, onSubmit, onClose }) => {
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Generate New Button */}
-          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+          <div className="bg-black border rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-gray-900">
+                <h3 className="font-semibold text-lime-400">
                   Generate Cover Letter for This Job
                 </h3>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-white mt-1">
                   AI will create a personalized cover letter based on this job description
                 </p>
               </div>
               <button
                 onClick={handleGenerateNew}
                 disabled={generatingNew}
-                className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
               >
                 <Plus size={18} />
                 <span>{generatingNew ? 'Generating...' : 'Generate New'}</span>
@@ -136,8 +136,8 @@ const ApplicationModal = ({ job, onSubmit, onClose }) => {
                     onClick={() => handleSelectLetter(letter)}
                     className={`border rounded-lg p-4 cursor-pointer transition-all ${
                       selectedLetterId === letter.id
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'border-gray-200 hover:border-indigo-300'
+                        ? 'border-stone-900 bg-lime-50'
+                        : 'border-gray-200 hover:border-stone-900'
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
@@ -150,7 +150,7 @@ const ApplicationModal = ({ job, onSubmit, onClose }) => {
                         </p>
                       </div>
                       {selectedLetterId === letter.id && (
-                        <span className="px-2 py-1 bg-indigo-600 text-white text-xs rounded-full">
+                        <span className="px-2 py-1 bg-orange-600 text-white text-xs rounded-full">
                           Selected
                         </span>
                       )}
@@ -183,13 +183,13 @@ const ApplicationModal = ({ job, onSubmit, onClose }) => {
                   type="checkbox"
                   checked={useCustom}
                   onChange={(e) => setUseCustom(e.target.checked)}
-                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded border-gray-300 text-stone-900 focus:ring-stone-900"
                 />
                 <span className="text-sm text-gray-600">Use custom letter</span>
               </label>
             </div>
             <textarea
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-stone-900 focus:border-transparent"
               rows={8}
               placeholder="Write your own cover letter here..."
               value={customCoverLetter}
@@ -213,14 +213,14 @@ const ApplicationModal = ({ job, onSubmit, onClose }) => {
         <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
           <button
             onClick={onClose}
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-6 py-2 border border-gray-300 text-white bg-stone-900 rounded-lg hover:bg-stone-400 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!useCustom && !selectedLetterId}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Submit Application
           </button>
