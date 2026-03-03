@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from .models import CustomUser, Job, SavedJob, CoverLetter
-from .serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJobSerializer, CoverLetterSerializer
+from .models import CustomUser, Job, SavedJob, CoverLetter, Application
+from .serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJobSerializer, CoverLetterSerializer, ApplicationSerializer
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -191,3 +191,40 @@ class CoverLetterViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(cover_letter)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+class ApplicationViewSet(viewsets.ModelViewSet):
+    serializer_class = ApplicationSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return Application.objects.all()
+        return Application.objects.filter(user=user)
+    
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+    
+    @action(detail=True, methods=['patch'])
+    def update_status(self, request, pk=None):
+        """Update application status (admin only)"""
+        if not request.user.is_staff:
+            return Response(
+                {"detail": "Only administrators can update status"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        application = self.get_object()
+        new_status = request.data.get('status')
+        
+        if new_status not in dict(Application.STATUS_CHOICES):
+            return Response(
+                {"detail": "Invalid status"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        application.status = new_status
+        application.save()
+        
+        serializer = self.get_serializer(application)
+        return Response(serializer.data)

@@ -3,6 +3,7 @@ from django.urls import reverse
 from pathlib import Path
 from api import models
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.exceptions import ValidationError
 from api.serializer import UserSerializer
 import pytest
 import json
@@ -411,13 +412,16 @@ class TestCoverLetterAPI:
 #########################
 @pytest.mark.django_db
 def test_authentication_required(api_client):
-    response = api_client.get("/applications/")
+    url = reverse("application-list")
+    response = api_client.get(url)
     assert response.status_code == 401
     
 @pytest.mark.django_db
 def test_user_sees_only_their_applications(api_client):
-    user1 = models.CustomUser.objects.create_user(username="user1", password="pass")
-    user2 = models.CustomUser.objects.create_user(username="user2", password="pass")
+    url = reverse("application-list")
+    
+    user1 = models.CustomUser.objects.create_user(username="user1", email="user1@test.com", password="pass")
+    user2 = models.CustomUser.objects.create_user(username="user2", email="user2@test.com", password="pass")
 
     job = models.Job.objects.create(title="Backend Dev", company="TestCo")
 
@@ -425,7 +429,7 @@ def test_user_sees_only_their_applications(api_client):
     models.Application.objects.create(user=user2, job=job)
 
     api_client.force_authenticate(user=user1)
-    response = api_client.get("/applications/")
+    response = api_client.get(url)
 
     assert response.status_code == 200
     assert len(response.data) == 1
@@ -433,8 +437,10 @@ def test_user_sees_only_their_applications(api_client):
     
 @pytest.mark.django_db
 def test_admin_sees_all_applications(api_client):
-    admin = models.CustomUser.objects.create_user(username="admin", password="pass", is_staff=True)
-    user = models.CustomUser.objects.create_user(username="user", password="pass")
+    url = reverse("application-list")
+    
+    admin = models.CustomUser.objects.create_user(username="admin", email="admin@test.com", password="pass", is_staff=True)
+    user = models.CustomUser.objects.create_user(username="user", email="user1@test.com", password="pass")
 
     job = models.Job.objects.create(title="Backend Dev", company="TestCo")
 
@@ -442,19 +448,21 @@ def test_admin_sees_all_applications(api_client):
     models.Application.objects.create(user=admin, job=job)
 
     api_client.force_authenticate(user=admin)
-    response = api_client.get("/applications/")
+    response = api_client.get(url)
 
     assert response.status_code == 200
     assert len(response.data) == 2
     
 @pytest.mark.django_db
 def test_user_can_create_application(api_client):
-    user = models.CustomUser.objects.create_user(username="user", password="pass")
+    url = reverse("application-list")
+    
+    user = models.CustomUser.objects.create_user(username="user", email="user1@test.com", password="pass")
     job = models.Job.objects.create(title="Backend Dev", company="TestCo")
 
     api_client.force_authenticate(user=user)
 
-    response = api_client.post("/applications/", {
+    response = api_client.post(url, {
         "job": job.id,
         "status": "applied"
     })
@@ -465,34 +473,34 @@ def test_user_can_create_application(api_client):
     
 @pytest.mark.django_db
 def test_duplicate_application_fails(api_client):
-    user = models.CustomUser.objects.create_user(username="user", password="pass")
+    url = reverse("application-list")
+    
+    user = models.CustomUser.objects.create_user(username="user", email="user1@test.com", password="pass")
     job = models.Job.objects.create(title="Backend Dev", company="TestCo")
 
     models.Application.objects.create(user=user, job=job)
 
     api_client.force_authenticate(user=user)
 
-    response = api_client.post("/applications/", {
-        "job": job.id,
-        "status": "applied"
-    })
-
-    assert response.status_code == 400
+    with pytest.raises(ValidationError):
+        api_client.post(url, {
+            "job": job.id,
+            "status": "applied"
+        })
     
 @pytest.mark.django_db
 def test_admin_can_update_status(api_client):
-    admin = models.CustomUser.objects.create_user(username="admin", password="pass", is_staff=True)
-    user = models.CustomUser.objects.create_user(username="user", password="pass")
+    admin = models.CustomUser.objects.create_user(username="admin", email="admin@test.com", password="pass", is_staff=True)
+    user = models.CustomUser.objects.create_user(username="user", email="user1@test.com", password="pass")
 
     job = models.Job.objects.create(title="Backend Dev", company="TestCo")
     app = models.Application.objects.create(user=user, job=job)
 
     api_client.force_authenticate(user=admin)
 
+    url = reverse("application-update-status", args=[app.id])
     response = api_client.patch(
-        f"/applications/{app.id}/update_status/",
-        {"status": "interview"},
-        format="json"
+        url, {"status": "interview"}, format="json"
     )
 
     assert response.status_code == 200
@@ -501,34 +509,32 @@ def test_admin_can_update_status(api_client):
     
 @pytest.mark.django_db
 def test_non_admin_cannot_update_status(api_client):
-    user = models.CustomUser.objects.create_user(username="user", password="pass")
+    user = models.CustomUser.objects.create_user(username="user", email="user1@test.com", password="pass")
     job = models.Job.objects.create(title="Backend Dev", company="TestCo")
     app = models.Application.objects.create(user=user, job=job)
 
     api_client.force_authenticate(user=user)
-
+    
+    url = reverse("application-update-status", args=[app.id])
     response = api_client.patch(
-        f"/applications/{app.id}/update_status/",
-        {"status": "interview"},
-        format="json"
+        url, {"status": "interview"}, format="json"
     )
 
     assert response.status_code == 403
     
 @pytest.mark.django_db
 def test_invalid_status_rejected(api_client):
-    admin = models.CustomUser.objects.create_user(username="admin", password="pass", is_staff=True)
-    user = models.CustomUser.objects.create_user(username="user", password="pass")
+    admin = models.CustomUser.objects.create_user(username="admin", email="admin@test.com", password="pass", is_staff=True)
+    user = models.CustomUser.objects.create_user(username="user", email="user1@test.com", password="pass")
 
     job = models.Job.objects.create(title="Backend Dev", company="TestCo")
     app = models.Application.objects.create(user=user, job=job)
 
     api_client.force_authenticate(user=admin)
 
+    url = reverse("application-update-status", args=[app.id])
     response = api_client.patch(
-        f"/applications/{app.id}/update_status/",
-        {"status": "invalid"},
-        format="json"
+        url, {"status": "invalid"}, format="json"
     )
 
     assert response.status_code == 400

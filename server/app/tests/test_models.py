@@ -389,7 +389,7 @@ def test_application_defaults_to_applied():
 
 @pytest.mark.django_db
 def test_user_cannot_apply_twice_to_same_job():
-    user = CustomUser.objects.create_user(username="testuser")
+    user = CustomUser.objects.create_user(username="testuser", email="test@test.com", password="pass")
     job = Job.objects.create(title="Backend Dev", company="TestCo")
 
     Application.objects.create(user=user, job=job)

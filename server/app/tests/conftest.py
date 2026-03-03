@@ -2,7 +2,7 @@ import pytest
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
-from api.models import CustomUser, Job
+from api.models import Job
 
 User = get_user_model()
 
