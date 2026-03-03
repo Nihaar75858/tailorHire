@@ -95,6 +95,18 @@ export class ApiService {
   async getCoverLetters() {
     return this.request("/cover-letters/");
   }
+
+  // Applications endpoints
+  async applyToJob(jobId, applicationData) {
+    return this.request('/applications/', {
+      method: 'POST',
+      body: JSON.stringify({ job: jobId, ...applicationData }),
+    });
+  }
+
+  async getApplications() {
+    return this.request('/applications/');
+  }
 }
 
 export default new ApiService();
