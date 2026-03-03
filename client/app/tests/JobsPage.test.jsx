@@ -59,6 +59,22 @@ vi.mock('../src/components/jobs/JobList', () => ({
   )
 }));
 
+vi.mock('../src/components/applications/ApplicationModal', () => ({
+  default: ({ job, onSubmit, onClose }) => (
+    <div data-testid="application-modal">
+      <span>Modal for {job.title}</span>
+      <button
+        onClick={() =>
+          onSubmit({ cover_letter: "Test Letter", cover_letter_id: 1 })
+        }
+      >
+        Confirm Apply
+      </button>
+      <button onClick={onClose}>Close</button>
+    </div>
+  ),
+}));
+
 test('shows loading state', () => {
   useJobs.mockReturnValue({
     jobs: [],
@@ -160,8 +176,7 @@ test('resets jobs when search is empty', async () => {
     .toHaveLength(2);
 });
 
-
-test('calls apply handler', async () => {
+test('opens modal and submits application', async () => {
   const user = userEvent.setup();
   window.alert = vi.fn();
 
@@ -175,20 +190,83 @@ test('calls apply handler', async () => {
 
   render(<JobsPage />);
 
+  // Click Apply
   await user.click(screen.getAllByText(/apply/i)[0]);
 
+  // Modal appears
+  expect(
+    screen.getByTestId('application-modal')
+  ).toBeInTheDocument();
+
+  // Confirm inside modal
+  await user.click(screen.getByText(/confirm apply/i));
+
+  // API should now be called
   expect(api.applyToJob).toHaveBeenCalledWith(
     1,
-    expect.objectContaining({
-      cover_letter: expect.any(String),
-    })
+    {
+      cover_letter: "Test Letter",
+      cover_letter_id: 1
+    }
   );
 
+  // Success alert
   expect(window.alert).toHaveBeenCalledWith(
-    expect.stringContaining('Applied to')
+    expect.stringContaining('Successfully applied')
   );
+
+  // Modal should close
+  expect(
+    screen.queryByTestId('application-modal')
+  ).not.toBeInTheDocument();
 });
 
+test('closes modal without applying when cancelled', async () => {
+  const user = userEvent.setup();
+
+  useJobs.mockReturnValue({
+    jobs: mockJobs,
+    loading: false,
+    error: null
+  });
+
+  render(<JobsPage />);
+
+  await user.click(screen.getAllByText(/apply/i)[0]);
+
+  expect(
+    screen.getByTestId('application-modal')
+  ).toBeInTheDocument();
+
+  await user.click(screen.getByText(/close/i));
+
+  expect(
+    screen.queryByTestId('application-modal')
+  ).not.toBeInTheDocument();
+});
+
+test('shows error if application fails', async () => {
+  const user = userEvent.setup();
+  window.alert = vi.fn();
+
+  useJobs.mockReturnValue({
+    jobs: mockJobs,
+    loading: false,
+    error: null
+  });
+
+  api.applyToJob.mockRejectedValue(new Error("Server error"));
+
+  render(<JobsPage />);
+
+  await user.click(screen.getAllByText(/apply/i)[0]);
+
+  await user.click(screen.getByText(/confirm apply/i));
+
+  expect(window.alert).toHaveBeenCalledWith(
+    expect.stringContaining('Application failed')
+  );
+});
 
 test('calls save handler', async () => {
   const user = userEvent.setup();
