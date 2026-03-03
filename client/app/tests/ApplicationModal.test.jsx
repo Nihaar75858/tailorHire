@@ -58,7 +58,7 @@ test("generates new cover letter and selects it", async () => {
     })
   );
 
-  expect(screen.getByText(/New AI Letter/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/New AI Letter/i).length).toBeGreaterThan(0);
 });
 
 test("selects a cover letter when clicked", async () => {
