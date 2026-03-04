@@ -1,11 +1,11 @@
 // src/tests/useJobs.test.js
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor, act } from "@testing-library/react";
 import { describe, test, expect, beforeEach, vi } from "vitest";
 
 vi.mock("../src/services/api", () => ({
   default: {
     getJobs: vi.fn(),
-    getApplictions: vi.fn(),
+    getApplications: vi.fn(),
   },
 }));
 
@@ -87,7 +87,9 @@ describe("useJobs hook", () => {
 
     expect(result.current.isJobApplied(5)).toBe(false);
 
-    result.current.markJobAsApplied(5);
+    await act(async () => {
+      result.current.markJobAsApplied(5);
+    });
 
     expect(result.current.isJobApplied(5)).toBe(true);
   });
