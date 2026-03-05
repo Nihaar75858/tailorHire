@@ -30,17 +30,15 @@ describe("useJobs hook", () => {
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
-
-    expect(result.current.appliedJobIds.size).toBe(0);
   });
 
-  test("loads jobs successfully", async () => {
+  test("loads jobs and filters out applied ones", async () => {
     const mockJobs = [
-      { id: 1, title: "Frontend" },
-      { id: 2, title: "Backend" },
+      { id: 1, title: "Frontend Dev" },
+      { id: 2, title: "Backend Dev" },
     ];
 
-    const mockApplications = [{ id: 10, job: 2 }];
+    const mockApplications = [{ id: 100, job: 1 }];
 
     api.getJobs.mockResolvedValue({
       results: mockJobs,
@@ -53,16 +51,23 @@ describe("useJobs hook", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.jobs).toEqual(mockJobs);
+    // Job with id=1 should be filtered out
+    expect(result.current.jobs).toEqual([
+      { id: 2, title: 'Backend Dev' }
+    ]);
 
-    expect(result.current.appliedJobIds.has(2)).toBe(true);
-    expect(result.current.appliedJobIds.has(1)).toBe(false);
+    expect(result.current.appliedJobCount).toBe(1);
   });
 
-  test("isJobApplied returns correct value", async () => {
-    api.getJobs.mockResolvedValue({ results: [{ id: 1 }] });
+  test('markJobAsApplied removes job from available jobs', async () => {
+    const mockJobs = [
+      { id: 1, title: 'Frontend Dev' },
+      { id: 2, title: 'Backend Dev' },
+    ];
+
+    api.getJobs.mockResolvedValue({ results: mockJobs });
     api.getApplications.mockResolvedValue({
-      results: [{ id: 99, job: 1 }],
+      results: [],
     });
 
     const { result } = renderHook(() => useJobs());
@@ -71,27 +76,19 @@ describe("useJobs hook", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.isJobApplied(1)).toBe(true);
-    expect(result.current.isJobApplied(999)).toBe(false);
-  });
+    // Initially both jobs available
+    expect(result.current.jobs).toHaveLength(2);
 
-  test("markJobAsApplied adds job id to applied set", async () => {
-    api.getJobs.mockResolvedValue({ results: [] });
-    api.getApplications.mockResolvedValue({ results: [] });
-
-    const { result } = renderHook(() => useJobs());
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
+    act(() => {
+      result.current.markJobAsApplied(1);
     });
 
-    expect(result.current.isJobApplied(5)).toBe(false);
+    // Now job 1 removed
+    expect(result.current.jobs).toEqual([
+      { id: 2, title: 'Backend Dev' }
+    ]);
 
-    await act(async () => {
-      result.current.markJobAsApplied(5);
-    });
-
-    expect(result.current.isJobApplied(5)).toBe(true);
+    expect(result.current.appliedJobCount).toBe(1);
   });
 
   test("sets error if fetch fails", async () => {
