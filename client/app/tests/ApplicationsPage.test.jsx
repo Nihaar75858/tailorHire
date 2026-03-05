@@ -49,9 +49,7 @@ describe("ApplicationsPage", () => {
 
     render(<ApplicationsPage />);
 
-    expect(
-      screen.getByText(/loading your applications/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/loading your applications/i)).toBeInTheDocument();
   });
 
   test("loads and displays applications", async () => {
@@ -77,7 +75,7 @@ describe("ApplicationsPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/you haven't applied to any jobs yet/i)
+        screen.getByText(/you haven't applied to any jobs yet/i),
       ).toBeInTheDocument();
     });
   });
@@ -126,7 +124,9 @@ describe("ApplicationsPage", () => {
 
     await userEvent.click(screen.getByText(/view cover letter/i));
 
-    expect(screen.getByText(/cover letter/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /cover letter/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/my amazing cover letter/i)).toBeInTheDocument();
   });
 
@@ -145,6 +145,8 @@ describe("ApplicationsPage", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /close/i }));
 
-    expect(screen.queryByText(/my amazing cover letter/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/my amazing cover letter/i),
+    ).not.toBeInTheDocument();
   });
 });
