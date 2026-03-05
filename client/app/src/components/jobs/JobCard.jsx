@@ -2,13 +2,13 @@
 // src/components/jobs/JobCard.jsx
 // ============================================
 import React from "react";
-import { MapPin, DollarSign, Calendar, Briefcase } from "lucide-react";
+import { MapPin, DollarSign, Calendar } from "lucide-react";
 
 const JobCard = ({ job, onApply, onSave }) => {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-4">
-        <div>
+        <div className="flex-1">
           <h3 className="text-xl font-semibold text-gray-900 mb-1">
             {job.title}
           </h3>
@@ -21,15 +21,15 @@ const JobCard = ({ job, onApply, onSave }) => {
 
       <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
         <div className="flex items-center space-x-1">
-          <MapPin size={16} data-testid="icon-location" />
+          <MapPin size={16} />
           <span>{job.location}</span>
         </div>
         <div className="flex items-center space-x-1">
-          <DollarSign size={16} data-testid="icon-salary" />
+          <DollarSign size={16} />
           <span>{job.salary}</span>
         </div>
         <div className="flex items-center space-x-1">
-          <Calendar size={16} data-testid="icon-date" />
+          <Calendar size={16} />
           <span>{job.posted}</span>
         </div>
       </div>
@@ -49,14 +49,12 @@ const JobCard = ({ job, onApply, onSave }) => {
 
       <div className="flex space-x-3">
         <button
-          aria-label="Apply to job"
           onClick={() => onApply(job)}
           className="flex-1 px-4 py-2 bg-neutral-600 text-white rounded-lg hover:bg-stone-900 transition-colors font-medium"
         >
           Apply Now
         </button>
         <button
-          aria-label="Save job"
           onClick={() => onSave(job)}
           className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
         >
