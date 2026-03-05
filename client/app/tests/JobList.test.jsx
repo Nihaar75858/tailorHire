@@ -24,17 +24,17 @@ const mockSave = vi.fn();
 
 test('shows empty state when no jobs', () => {
   render(
-    <JobList jobs={[]} onApply={mockApply} onSave={mockSave} />
+    <JobList jobs={[]} onApply={mockApply} onSave={mockSave} loading={false} />
   );
 
   expect(
-    screen.getByText(/no jobs found/i)
+    screen.getByText(/no available jobs found/i)
   ).toBeInTheDocument();
 });
 
 test('renders job cards when jobs exist', () => {
   render(
-    <JobList jobs={mockJobs} onApply={mockApply} onSave={mockSave} />
+    <JobList jobs={mockJobs} onApply={mockApply} onSave={mockSave} loading={false} />
   );
 
   const cards = screen.getAllByTestId('job-card');
@@ -43,7 +43,7 @@ test('renders job cards when jobs exist', () => {
 
 test('displays job titles', () => {
   render(
-    <JobList jobs={mockJobs} onApply={mockApply} onSave={mockSave} />
+    <JobList jobs={mockJobs} onApply={mockApply} onSave={mockSave} loading={false} />
   );
 
   expect(screen.getByText('Frontend Developer')).toBeInTheDocument();
@@ -52,7 +52,7 @@ test('displays job titles', () => {
 
 test('calls onApply when apply clicked', async () => {
   render(
-    <JobList jobs={mockJobs} onApply={mockApply} onSave={mockSave} />
+    <JobList jobs={mockJobs} onApply={mockApply} onSave={mockSave} loading={false} />
   );
 
   const applyButtons = screen.getAllByText(/apply/i);
@@ -64,7 +64,7 @@ test('calls onApply when apply clicked', async () => {
 
 test('calls onSave when save clicked', async () => {
   render(
-    <JobList jobs={mockJobs} onApply={mockApply} onSave={mockSave} />
+    <JobList jobs={mockJobs} onApply={mockApply} onSave={mockSave} loading={false} />
   );
 
   const saveButtons = screen.getAllByText(/save/i);
@@ -73,3 +73,12 @@ test('calls onSave when save clicked', async () => {
 
   expect(mockSave).toHaveBeenCalledWith(mockJobs[1]);
 });
+
+test("shows loading state", () => {
+  render(
+    <JobList jobs={[]} onApply={mockApply} onSave={mockSave} loading={true} />
+  );
+
+  expect(screen.getByText(/loading jobs/i)).toBeInTheDocument();
+});
+
