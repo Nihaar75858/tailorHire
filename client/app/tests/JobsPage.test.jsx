@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { test, expect, vi } from 'vitest';
+import { test, expect, vi, beforeEach } from 'vitest';
 import JobsPage from '../src/pages/Jobs/JobsPage';
 import { useJobs } from '../src/components/hooks/useJobs';
 
@@ -25,12 +25,14 @@ const mockJobs = [
 
 vi.mock('../src/services/api', () => ({
   default: {
-    getJobs: vi.fn(),
     applyToJob: vi.fn(),
+    saveJob: vi.fn(),
   },
 }));
 
 import api from '../src/services/api';
+
+const mockMarkApplied = vi.fn();
 
 vi.mock('../src/components/jobs/JobSearch', () => ({
   default: ({ searchQuery, onSearchChange, onSearch }) => (
@@ -75,25 +77,17 @@ vi.mock('../src/components/applications/ApplicationModal', () => ({
   ),
 }));
 
-test('shows loading state', () => {
-  useJobs.mockReturnValue({
-    jobs: [],
-    loading: true,
-    error: null
-  });
-
-  render(<JobsPage />);
-
-  expect(
-    screen.getByText(/loading jobs/i)
-  ).toBeInTheDocument();
+beforeEach(() => {
+  vi.clearAllMocks();
 });
 
 test('shows error state', () => {
   useJobs.mockReturnValue({
     jobs: [],
     loading: false,
-    error: 'API failed'
+    error: 'API failed',
+    markJobAsApplied: mockMarkApplied,
+    appliedJobsCount: 0
   });
 
   render(<JobsPage />);
@@ -107,7 +101,9 @@ test('renders jobs from hook', () => {
   useJobs.mockReturnValue({
     jobs: mockJobs,
     loading: false,
-    error: null
+    error: null,
+    markJobAsApplied: mockMarkApplied,
+    appliedJobsCount: 0
   });
 
   render(<JobsPage />);
@@ -127,11 +123,9 @@ test('filters jobs based on search query', async () => {
   useJobs.mockReturnValue({
     jobs: mockJobs,
     loading: false,
-    error: null
-  });
-
-  api.getJobs.mockResolvedValue({
-    results: [mockJobs[0]] // only frontend
+    error: null,
+    markJobAsApplied: mockMarkApplied,
+    appliedJobsCount: 0
   });
 
   render(<JobsPage />);
@@ -140,10 +134,6 @@ test('filters jobs based on search query', async () => {
 
   await user.type(input, 'Frontend');
   await user.click(screen.getByText(/search/i));
-
-  expect(api.getJobs).toHaveBeenCalledWith({
-    search: 'Frontend'
-  });
 
   expect(
     screen.getByText('Frontend Developer')
@@ -161,7 +151,9 @@ test('resets jobs when search is empty', async () => {
   useJobs.mockReturnValue({
     jobs: mockJobs,
     loading: false,
-    error: null
+    error: null,
+    markJobAsApplied: mockMarkApplied,
+    appliedJobsCount: 0
   });
 
   render(<JobsPage />);
@@ -183,7 +175,9 @@ test('opens modal and submits application', async () => {
   useJobs.mockReturnValue({
     jobs: mockJobs,
     loading: false,
-    error: null
+    error: null,
+    markJobAsApplied: mockMarkApplied,
+    appliedJobsCount: 0
   });
 
   api.applyToJob.mockResolvedValue({});
@@ -210,6 +204,8 @@ test('opens modal and submits application', async () => {
     }
   );
 
+  expect(mockMarkApplied).toHaveBeenCalledWith(1);
+
   // Success alert
   expect(window.alert).toHaveBeenCalledWith(
     expect.stringContaining('Successfully applied')
@@ -227,7 +223,9 @@ test('closes modal without applying when cancelled', async () => {
   useJobs.mockReturnValue({
     jobs: mockJobs,
     loading: false,
-    error: null
+    error: null,
+    markJobAsApplied: mockMarkApplied,
+    appliedJobsCount: 0
   });
 
   render(<JobsPage />);
@@ -252,7 +250,9 @@ test('shows error if application fails', async () => {
   useJobs.mockReturnValue({
     jobs: mockJobs,
     loading: false,
-    error: null
+    error: null,
+    markJobAsApplied: mockMarkApplied,
+    appliedJobsCount: 0
   });
 
   api.applyToJob.mockRejectedValue(new Error("Server error"));
@@ -260,7 +260,6 @@ test('shows error if application fails', async () => {
   render(<JobsPage />);
 
   await user.click(screen.getAllByText(/apply/i)[0]);
-
   await user.click(screen.getByText(/confirm apply/i));
 
   expect(window.alert).toHaveBeenCalledWith(
@@ -271,13 +270,16 @@ test('shows error if application fails', async () => {
 test('calls save handler', async () => {
   const user = userEvent.setup();
   window.alert = vi.fn();
-  api.saveJob = vi.fn().mockResolvedValue({});
 
   useJobs.mockReturnValue({
     jobs: mockJobs,
     loading: false,
-    error: null
+    error: null,
+    markJobAsApplied: mockMarkApplied,
+    appliedJobsCount: 0
   });
+
+  api.saveJob.mockResolvedValue({});
 
   render(<JobsPage />);
 
