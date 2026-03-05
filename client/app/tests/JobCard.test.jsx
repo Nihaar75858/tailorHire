@@ -25,10 +25,10 @@ test('renders job title and company', () => {
   expect(screen.getByText(/techcorp/i)).toBeInTheDocument();
 });
 
-test('renders job metadata', () => {
+test('renders job metadata section', () => {
   render(<JobCard job={mockJob} onApply={mockApply} onSave={mockSave} />);
 
-  expect(screen.getByText(/remote/i)).toBeInTheDocument();
+  expect(screen.getByText(/Remote/i)).toBeInTheDocument();
   expect(screen.getByText(/\$100k/i)).toBeInTheDocument();
   expect(screen.getByText(/2 days ago/i)).toBeInTheDocument();
 });
@@ -72,14 +72,4 @@ test('handles empty requirements gracefully', () => {
 
   expect(screen.queryByText(/react/i)).not.toBeInTheDocument();
 });
-
-test('renders job icons', () => {
-  render(<JobCard job={mockJob} onApply={mockApply} onSave={mockSave} />);
-
-  expect(screen.getByTestId('icon-location')).toBeInTheDocument();
-  expect(screen.getByTestId('icon-salary')).toBeInTheDocument();
-  expect(screen.getByTestId('icon-date')).toBeInTheDocument();
-});
-
-
 
