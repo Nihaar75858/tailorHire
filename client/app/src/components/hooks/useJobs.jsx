@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import api from "../../services/api";
 
 export const useJobs = () => {
@@ -33,12 +33,17 @@ export const useJobs = () => {
   }, []);
 
   // Return only jobs that haven't been applied to
-  const availableJobs = allJobs.filter((job) => !appliedJobIds.has(job.id));
+  // (New) Memoize this to prevent re-creating on every render
+  const availableJobs = useMemo(
+    () => allJobs.filter(job => !appliedJobIds.has(job.id)),
+    [allJobs, appliedJobIds]
+  );
 
   // Function to mark job as applied (removes from available jobs)
-  const markJobAsApplied = (jobId) => {
-    setAppliedJobIds((prev) => new Set([...prev, jobId]));
-  };
+  // (New) Use useCallback to prevent re-creating function
+  const markJobAsApplied = useCallback((jobId) => {
+    setAppliedJobIds(prev => new Set([...prev, jobId]));
+  }, []);
 
   return {
     jobs: availableJobs, // Only unapplied jobs
