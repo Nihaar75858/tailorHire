@@ -1,1 +1,14 @@
 docs/
+.git
+.gitignore
+node_modules
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+venv
+build
+dist
+datadump.json
+sqlite_backup.json

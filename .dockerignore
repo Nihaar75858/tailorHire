@@ -9,3 +9,14 @@ server/app/db.sqlite3
 server/.pytest_cache/
 server/app/.env
 docs/
+.git
+.gitignore
+node_modules
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+venv
+build
+dist
