@@ -1,11 +1,11 @@
 import pytest
 from rest_framework.exceptions import Throttled
 from django.contrib.auth.models import AnonymousUser, User
-from api.throttling import AIServiceThrottle
+from api.models import CustomUser
 
 
 def test_authenticated_user_cache_key(factory, throttle, db):
-    user = User.objects.create_user(username="test", password="pass")
+    user = CustomUser.objects.create_user(username="test", password="pass")
     request = factory.get("/ai-endpoint/")
     request.user = user
 
@@ -37,14 +37,7 @@ def test_throttle_failure_returns_custom_message(factory, throttle):
     assert "retry_after" in data
 
 
-def test_throttle_blocks_after_limit(settings, factory):
-    settings.REST_FRAMEWORK = {
-        "DEFAULT_THROTTLE_RATES": {
-            "ai_service": "2/min"
-        }
-    }
-
-    throttle = AIServiceThrottle()
+def test_throttle_blocks_after_limit(factory, throttle):
     request = factory.get("/ai-endpoint/")
     request.user = AnonymousUser()
 

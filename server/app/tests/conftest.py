@@ -1,9 +1,9 @@
 import pytest
 from django.urls import reverse
-from api.throttling import AIServiceThrottle
 from rest_framework.test import APIRequestFactory
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
+from api.throttling import AIServiceThrottle
 from api.models import Job
 
 User = get_user_model()
@@ -64,7 +64,11 @@ def remove_saved_job_url():
 def factory():
     return APIRequestFactory()
 
-
-@pytest.fixture
+@pytest.fixture()
 def throttle():
-    return AIServiceThrottle()
+    throttle = AIServiceThrottle.__new__(AIServiceThrottle)
+    throttle.rate = "2/min"                                 
+    throttle.num_requests, throttle.duration = throttle.parse_rate(throttle.rate)
+    throttle.history = []   # set by allow_request() normally
+    throttle.now = throttle.timer()
+    return throttle
