@@ -1,4 +1,4 @@
-from rest_framework.throttling import UserRateThrottle
+from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 from rest_framework.exceptions import Throttled 
 
 class AIServiceThrottle(UserRateThrottle): 
@@ -22,25 +22,32 @@ class AIServiceThrottle(UserRateThrottle):
                 } 
             )
                 
-class CoverLetterThrottle():
-    pass
+class CoverLetterThrottle(UserRateThrottle): 
+    """ Throttle for cover letter generation 10 requests per hour per user """ 
+    scope = 'cover_letter' 
+    rate = '10/hour' 
 
+class ChatMessageThrottle(UserRateThrottle): 
+    """ Throttle for chat messages 30 requests per hour per user """ 
+    scope = 'chat_message' 
+    rate = '30/hour' 
+    
+class JobRecommendationThrottle(UserRateThrottle): 
+    """ Throttle for AI job recommendations 20 requests per hour per user """ 
+    scope = 'job_recommendation' 
+    rate = '20/hour' 
 
-class ChatMessageThrottle():
-    pass
+class BurstRateThrottle(UserRateThrottle): 
+    """ Prevent rapid-fire requests (burst protection) 5 requests per minute """ 
+    scope = 'burst' 
+    rate = '5/min' 
 
-
-class JobRecommendationThrottle():
-    pass
-
-
-class BurstRateThrottle():
-    pass
-
-
-class DailyAILimitThrottle():
-    pass
-
-
-class AnonymousStrictThrottle():
-    pass
+class DailyAILimitThrottle(UserRateThrottle): 
+    """ Daily limit for all AI operations combined 50 AI requests per day per user """ 
+    scope = 'daily_ai' 
+    rate = '50/day' 
+    
+class AnonymousStrictThrottle(AnonRateThrottle): 
+    """ Very strict throttle for anonymous users Prevents bot attacks """ 
+    scope = 'anon_strict' 
+    rate = '5/hour'

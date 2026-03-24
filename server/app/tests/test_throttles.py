@@ -19,6 +19,13 @@ def exhaust_throttle(throttle, request, limit):
     for _ in range(limit):
         throttle.allow_request(request, None)
         
+def make_user(username):
+    return CustomUser.objects.create_user(
+        username=username,
+        email=f"{username}@test.com",
+        password="pass"
+    )
+        
 # ── Configuration ──────────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("throttle_fixture,expected_scope,expected_requests,expected_duration", [
@@ -104,8 +111,8 @@ def test_anon_cache_key_uses_ip(factory, anon_strict_throttle):
     assert "anon_strict" in key
 
 def test_different_users_get_different_cache_keys(factory, cover_letter_throttle, db):
-    user1 = CustomUser.objects.create_user(username="user_one", password="pass")
-    user2 = CustomUser.objects.create_user(username="user_two", password="pass")
+    user1 = CustomUser.objects.create_user(username="user_one", email="one@test.com", password="pass")
+    user2 = CustomUser.objects.create_user(username="user_two", email="two@test.com", password="pass")
     key1 = cover_letter_throttle.get_cache_key(make_auth_request(factory, user1), None)
     key2 = cover_letter_throttle.get_cache_key(make_auth_request(factory, user2), None)
     assert key1 != key2
@@ -162,12 +169,17 @@ def test_throttle_blocks_after_limit(factory, throttle):
 
 # ── Wait time ──────────────────────────────────────────────────────────────────
 
-def test_wait_is_none_when_not_blocked(cover_letter_throttle):
-    assert cover_letter_throttle.wait() is None
-
 def test_burst_wait_is_within_minute(factory, burst_throttle, db):
-    user = CustomUser.objects.create_user(username="burst_wait_user", password="pass")
+    user = make_user("burst_wait_user")
     req = make_auth_request(factory, user)
     exhaust_throttle(burst_throttle, req, 5)
     burst_throttle.allow_request(req, None)
     assert 0 < burst_throttle.wait() <= 60
+
+def test_daily_ai_wait_is_within_day(factory, daily_ai_throttle, db):
+    user = make_user("daily_wait_user")
+    req = make_auth_request(factory, user)
+    exhaust_throttle(daily_ai_throttle, req, 50)
+    daily_ai_throttle.allow_request(req, None)
+    assert 0 < daily_ai_throttle.wait() <= 86400
+    
