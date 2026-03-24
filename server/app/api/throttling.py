@@ -21,3 +21,26 @@ class AIServiceThrottle(UserRateThrottle):
                 "retry_after": self.wait() 
                 } 
             )
+                
+class CoverLetterThrottle():
+    pass
+
+
+class ChatMessageThrottle():
+    pass
+
+
+class JobRecommendationThrottle():
+    pass
+
+
+class BurstRateThrottle():
+    pass
+
+
+class DailyAILimitThrottle():
+    pass
+
+
+class AnonymousStrictThrottle():
+    pass

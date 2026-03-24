@@ -1,9 +1,18 @@
 import pytest
 from django.urls import reverse
+from unittest.mock import patch
 from rest_framework.test import APIRequestFactory
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
-from api.throttling import AIServiceThrottle
+from api.throttling import (
+    CoverLetterThrottle,
+    ChatMessageThrottle,
+    JobRecommendationThrottle,
+    BurstRateThrottle,
+    DailyAILimitThrottle,
+    AnonymousStrictThrottle,
+    AIServiceThrottle
+)
 from api.models import Job
 
 User = get_user_model()
@@ -64,11 +73,38 @@ def remove_saved_job_url():
 def factory():
     return APIRequestFactory()
 
-@pytest.fixture()
+def make_throttle(throttle_class, rate=None):
+    """Helper to instantiate any throttle class bypassing settings lookup."""
+    with patch.object(throttle_class, 'get_rate', return_value=rate):
+        t = throttle_class()  # __init__ calls get_rate(), which is now mocked
+    t.history = []
+    t.now = t.timer()
+    return t
+
+@pytest.fixture
 def throttle():
-    throttle = AIServiceThrottle.__new__(AIServiceThrottle)
-    throttle.rate = "2/min"                                 
-    throttle.num_requests, throttle.duration = throttle.parse_rate(throttle.rate)
-    throttle.history = []   # set by allow_request() normally
-    throttle.now = throttle.timer()
-    return throttle
+    return make_throttle(AIServiceThrottle, rate="2/min")
+
+@pytest.fixture
+def cover_letter_throttle():
+    return make_throttle(CoverLetterThrottle, rate="10/hour")
+
+@pytest.fixture
+def chat_message_throttle():
+    return make_throttle(ChatMessageThrottle, rate="30/hour")
+
+@pytest.fixture
+def job_recommendation_throttle():
+    return make_throttle(JobRecommendationThrottle, rate="20/hour")
+
+@pytest.fixture
+def burst_throttle():
+    return make_throttle(BurstRateThrottle, rate="5/min")
+
+@pytest.fixture
+def daily_ai_throttle():
+    return make_throttle(DailyAILimitThrottle, rate="50/day")
+
+@pytest.fixture
+def anon_strict_throttle():
+    return make_throttle(AnonymousStrictThrottle, rate="5/hour")
