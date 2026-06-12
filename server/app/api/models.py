@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import FileExtensionValidator
+from django.contrib.auth import get_user_model
 
 # Create your models here.
 class CustomUser(AbstractUser):
@@ -24,6 +25,67 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.firstName
+
+User = get_user_model()
+
+class AIUsageLog(models.Model):
+    """
+    Track AI usage for monitoring and cost management
+    """
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    endpoint = models.CharField(max_length=100)
+    request_data = models.JSONField(null=True, blank=True)
+    duration = models.FloatField(help_text="Request duration in seconds")
+    status_code = models.IntegerField()
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['endpoint', 'created_at']),
+            models.Index(fields=['ip_address', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.endpoint} - {self.user} - {self.created_at}"
+
+
+class UserAIQuota(models.Model):
+    """
+    Track user AI quotas and limits
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='ai_quota')
+    daily_limit = models.IntegerField(default=50)
+    monthly_limit = models.IntegerField(default=1000)
+    daily_usage = models.IntegerField(default=0)
+    monthly_usage = models.IntegerField(default=0)
+    last_reset_date = models.DateField(auto_now_add=True)
+    is_premium = models.BooleanField(default=False)
+    
+    def reset_daily(self):
+        """Reset daily usage counter"""
+        self.daily_usage = 0
+        self.save()
+    
+    def reset_monthly(self):
+        """Reset monthly usage counter"""
+        self.monthly_usage = 0
+        self.save()
+    
+    def can_make_request(self):
+        """Check if user can make AI request"""
+        if self.is_premium:
+            return True
+        return self.daily_usage < self.daily_limit and self.monthly_usage < self.monthly_limit
+    
+    def increment_usage(self):
+        """Increment usage counters"""
+        self.daily_usage += 1
+        self.monthly_usage += 1
+        self.save()
 
 class Job(models.Model):
     JOB_TYPES = [

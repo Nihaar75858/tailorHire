@@ -27,14 +27,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-(c=7a1gx&_ubp6nd8x+_qx4)&-42u+ysgox4__4=!*pp0ihqz('
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
+DEBUG = config('DEBUG', default=True, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -44,10 +44,17 @@ INSTALLED_APPS = [
     'api',
     'rest_framework',
     "corsheaders",
-    'django_extensions'
+    'django_extensions',
+    'django_ratelimit',
+    'axes',
+    'rest_framework_simplejwt',
+    'channels',
+    'drf_yasg',
+    'django_crontab',
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -55,9 +62,294 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
+    
+    # Custom middleware
+    'api.middleware.BotProtectionMiddleware',
+    'api.middleware.RequestValidationMiddleware',
+    'api.middleware.IPRateLimitMiddleware',
+    
+    # Axes must be last
+    'axes.middleware.AxesMiddleware',
 ]
+
+# Database
+# https://docs.djangoproject.com/en/3.2/ref/settings/#databases
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+# NEW PostgreSQL Configuration
+DATABASES = {
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL'),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
+
+# ============================================
+# CACHE CONFIGURATION - REDIS
+# ============================================
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+            'IGNORE_EXCEPTIONS': False,
+        },
+        'KEY_PREFIX': 'tailorhire',
+        'TIMEOUT': 3600,  # 1 hour default
+    }
+}
+
+#  Session and cache backend must use Redis
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
+
+#  ============================================
+# AUTHENTICATION & SECURITY
+# ============================================
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',  # FIX: Django-Axes brute force protection
+    'django.contrib.auth.backends.ModelBackend',  # Default Django auth
+]
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    
+    # ============================================
+    # THROTTLING CONFIGURATION
+    # ============================================
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        # Basic rates
+        'anon': '100/day',
+        'user': '1000/day',
+        'anon_strict': '5/hour',
+        
+        # AI Service Specific Rates
+        'ai_service': '100/day',
+        'cover_letter': '10/hour',
+        'chat_message': '30/hour',
+        'job_recommendation': '20/hour',
+        'burst': '5/min',
+        'daily_ai': '50/day',
+    }
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+}
+
+#  ============================================
+# DJANGO AXES CONFIGURATION (Brute Force Protection)
+# ============================================
+AXES_FAILURE_LIMIT = 5  # Lock after 5 failed attempts
+AXES_COOLOFF_TIME = timedelta(hours=1)  # Lock for 1 hour
+AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP = True
+AXES_RESET_ON_SUCCESS = True
+AXES_USE_USER_AGENT = True
+AXES_VERBOSE = True  # Log all attempts
+AXES_CACHE = 'default'  # Use Redis cache for tracking
+
+#  ============================================
+# CORS CONFIGURATION
+# ============================================
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='http://localhost:3000,http://localhost:5173'
+).split(',')
+CORS_ALLOW_CREDENTIALS = True
+
+# Allow all methods
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS'
+]
+
+# Allow headers
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+#  ============================================
+# FILE UPLOADS
+# ============================================
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880
+
+# Allowed file types for uploads
+ALLOWED_UPLOAD_EXTENSIONS = ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png']
+
+#  ============================================
+# HUGGING FACE CONFIGURATION
+# ============================================
+HUGGINGFACE_API_KEY = config('HUGGINGFACE_API_KEY', default='')
+HUGGING_FACE_TIMEOUT = 30  # seconds
+
+#  ============================================
+# CHANNELS CONFIGURATION (WebSockets)
+# ============================================
+ASGI_APPLICATION = 'tailorhire.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [config('REDIS_URL', default='redis://127.0.0.1:6379/0')],
+        },
+    },
+}
+
+#  ============================================
+# LOGGING CONFIGURATION
+# ============================================
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {name} {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'tailorhire.log'),
+            'maxBytes': 1024 * 1024 * 15,  # 15MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+        'ai_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'ai_usage.log'),
+            'maxBytes': 1024 * 1024 * 15,  # 15MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+        'security_file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'security.log'),
+            'maxBytes': 1024 * 1024 * 15,  # 15MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'api': {
+            'handlers': ['console', 'ai_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'axes': {
+            'handlers': ['console', 'security_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}
+
+# Create logs directory if it doesn't exist
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+# ============================================
+# DJANGO AXES - CRON RESET
+# ============================================
+CRONJOBS = [
+    # Reset Axes failed attempts every hour
+    ('0 * * * *', 'axes.cron.reset_failed_login_attempts'),
+    # Reset daily AI quotas at midnight
+    ('0 0 * * *', 'api.cron.reset_daily_quotas'),
+    # Reset monthly AI quotas on 1st of month
+    ('0 0 1 * *', 'api.cron.reset_monthly_quotas'),
+    # Check for suspicious activity every hour
+    ('0 * * * *', 'api.cron.check_suspicious_activity'),
+    # Clean old logs daily at 2 AM
+    ('0 2 * * *', 'api.cron.clean_old_logs'),
+]
+
+# ============================================
+# SECURITY SETTINGS
+# ============================================
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Strict'
+CSRF_COOKIE_SAMESITE = 'Strict'
+
+# In production, enable these:
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 ROOT_URLCONF = 'app.urls'
 
@@ -77,50 +369,9 @@ TEMPLATES = [
     },
 ]
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ]
-}
-
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=5),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
-}
-
-WSGI_APPLICATION = 'app.wsgi.application'
-
-AUTH_USER_MODEL = 'api.CustomUser'
-
-
-# Database
-# https://docs.djangoproject.com/en/3.2/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
-# NEW PostgreSQL Configuration
-DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL', default='sqlite:///db.sqlite3'),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -136,36 +387,25 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+WSGI_APPLICATION = 'app.wsgi.application'
+
+AUTH_USER_MODEL = 'api.CustomUser'
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.2/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/3.2/howto/static-files/
-
+#  ============================================
+# STATIC FILES
+# ============================================
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
-# Media files (user uploads)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-CORS_ORIGIN_ALLOW_ALL = True
-
-HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY', '')
