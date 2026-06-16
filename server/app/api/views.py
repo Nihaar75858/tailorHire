@@ -5,13 +5,24 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import viewsets, status, filters
+from django.utils import timezone
+from .throttling import (
+    CoverLetterThrottle, ChatMessageThrottle, 
+    JobRecommendationThrottle, BurstRateThrottle,
+    DailyAILimitThrottle
+)
+from .validators import ContentValidator
+from .decorators import ai_rate_limit, require_verified_user, log_ai_usage
+from .models import AIUsageLog, UserAIQuota
 from rest_framework.response import Response
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import get_user_model
 from .utils import HuggingFaceAI
+import logging
 
 ai_helper = HuggingFaceAI()
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 class UserViewSet(viewsets.ModelViewSet):
@@ -89,22 +100,52 @@ class JobViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         serializer.save(posted_by=self.request.user)
-    
+
+    @require_verified_user
+    @log_ai_usage
     @action(detail=False, methods=['get'])
     def recommended(self, request):
         """Get AI-recommended jobs based on user skills"""
+        
+        # Apply throttling manually for this endpoint
+        throttle = JobRecommendationThrottle()
+        if not throttle.allow_request(request, self):
+            return Response({
+                'error': 'Rate limit exceeded',
+                'message': 'Too many recommendation requests. Please try again later.',
+                'retry_after': throttle.wait()
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+            
         user = request.user
         if not user.skills:
-            return Response(
-                {"detail": "Please update your skills in profile to get recommendations"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({
+                'error': 'No skills found',
+                "message": "Please update your skills in profile to get recommendations"
+                }, status=status.HTTP_400_BAD_REQUEST)
         
-        jobs = Job.objects.filter(is_active=True)
-        recommended_jobs = ai_helper.recommend_jobs(user.skills, jobs)
+        # Check quota
+        quota, created = UserAIQuota.objects.get_or_create(user=user)
+        if not quota.can_make_request():
+            return Response({
+                'error': 'Quota exceeded',
+                'message': 'AI recommendation limit reached'
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
         
-        serializer = JobListSerializer(recommended_jobs, many=True)
-        return Response(serializer.data)
+        try:
+            jobs = Job.objects.filter(is_active=True)
+            recommended_jobs = ai_helper.recommend_jobs(user.skills, jobs)
+            
+            # Increment usage
+            quota.increment_usage()
+        
+            serializer = JobListSerializer(recommended_jobs, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Job Recommendation Error - User: {user.id}, Error: {str(e)}")
+            return Response({
+                'error': 'Recommendation service error',
+                'message': 'Unable to generate recommendations'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     
 class SavedJobViewSet(viewsets.ModelViewSet):
     serializer_class = SavedJobSerializer
@@ -140,10 +181,13 @@ class SavedJobViewSet(viewsets.ModelViewSet):
 class CoverLetterViewSet(viewsets.ModelViewSet):
     serializer_class = CoverLetterSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [CoverLetterThrottle, BurstRateThrottle, DailyAILimitThrottle]
     
     def get_queryset(self):
         return CoverLetter.objects.filter(user=self.request.user)
     
+    @require_verified_user
+    @log_ai_usage
     def create(self, request):
         """Generate AI cover letter"""
         job_description = request.data.get('job_description')
@@ -156,6 +200,42 @@ class CoverLetterViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Validate input
+        try:
+            job_description = ContentValidator.validate_job_description(job_description)
+            resume_text = ContentValidator.validate_resume_text(resume_text)
+        except serializer.ValidationError as e:
+            return Response({
+                'error': 'Validation failed',
+                'message': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Check user quota
+        quota, created = UserAIQuota.objects.get_or_create(user=request.user)
+        
+        if not quota.can_make_request():
+            return Response({
+                'error': 'Quota exceeded',
+                'message': f'You have reached your AI generation limit',
+                'daily_remaining': max(0, quota.daily_limit - quota.daily_usage),
+                'monthly_remaining': max(0, quota.monthly_limit - quota.monthly_usage)
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        
+        # Check for duplicate requests (within 5 minutes)
+        recent_letter = CoverLetter.objects.filter(
+            user=request.user,
+            job_description=job_description,
+            created_at__gte=timezone.now() - timezone.timedelta(minutes=5)
+        ).first()
+        
+        if recent_letter:
+            # Return cached result instead of regenerating
+            serializer = self.get_serializer(recent_letter)
+            return Response({
+                'cached': True,
+                **serializer.data
+            }, status=status.HTTP_200_OK)
+        
         user = request.user
         user_profile = {
             'name': user.get_full_name() or user.username,
@@ -163,34 +243,47 @@ class CoverLetterViewSet(viewsets.ModelViewSet):
             'bio': user.bio or ''
         }
         
-        # Generate cover letter
-        generated_letter = ai_helper.generate_cover_letter(
-            resume_text, 
-            job_description, 
-            user_profile
-        )
+        try:
+            # Generate cover letter
+            generated_letter = ai_helper.generate_cover_letter(
+                resume_text, 
+                job_description, 
+                user_profile
+            )
         
-        # Save cover letter
-        cover_letter_data = {
-            'user': user.id,
-            'job_description': job_description,
-            'resume_text': resume_text,
-            'generated_letter': generated_letter
-        }
-        
-        if job_id:
-            cover_letter_data['job'] = job_id
-        
-        cover_letter = CoverLetter.objects.create(
-            user=user,
-            job_id=job_id if job_id else None,
-            job_description=job_description,
-            resume_text=resume_text,
-            generated_letter=generated_letter
-        )
-        
-        serializer = self.get_serializer(cover_letter)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+            # Save cover letter
+            cover_letter_data = {
+                'user': user.id,
+                'job_description': job_description,
+                'resume_text': resume_text,
+                'generated_letter': generated_letter
+            }
+            
+            if job_id:
+                cover_letter_data['job'] = job_id
+            
+            cover_letter = CoverLetter.objects.create(
+                user=user,
+                job_id=job_id if job_id else None,
+                job_description=job_description,
+                resume_text=resume_text,
+                generated_letter=generated_letter
+            )
+            
+            # Increment usage
+            quota.increment_usage()
+            
+            # Log successful generation
+            logger.info(f"Cover Letter Generated - User: {user.id}, Job Desc Length: {len(job_description)}")
+            
+            serializer = self.get_serializer(cover_letter)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(f"Cover Letter Error - User: {user.id}, Error: {str(e)}")
+            return Response({
+                'error': 'AI service error',
+                'message': 'Unable to generate cover letter. Please try again later.'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     
 class ApplicationViewSet(viewsets.ModelViewSet):
     serializer_class = ApplicationSerializer

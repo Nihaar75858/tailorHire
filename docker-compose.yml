@@ -81,6 +81,7 @@ services:
     depends_on:
       - backend
     stdin_open: true
+    tty: true
     # tty: truedocker-compose build --no-cache
     networks:
       - tailorhire_network
