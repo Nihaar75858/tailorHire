@@ -52,8 +52,8 @@ class UserViewSet(viewsets.ModelViewSet):
     def login_user(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
-        print("Trying login for:", username, password)
-        user = authenticate(username=username, password=password)
+        # print("Trying login for:", username, password)
+        user = authenticate(request, username=username, password=password)
         if user:
             login(request, user)
             refresh = RefreshToken.for_user(user)

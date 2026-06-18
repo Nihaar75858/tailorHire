@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-(c=7a1gx&_ubp6nd8x+_qx4)&-42u+ysgox4__4=!*pp0ihqz('
+SECRET_KEY = config('SECRET_KEY', default='CHANGE-ME-IN-PRODUCTION')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
@@ -69,7 +69,7 @@ MIDDLEWARE = [
     'api.middleware.RequestValidationMiddleware',
     'api.middleware.IPRateLimitMiddleware',
     
-    # Axes must be last
+    # # Axes must be last
     'axes.middleware.AxesMiddleware',
 ]
 
@@ -86,7 +86,10 @@ MIDDLEWARE = [
 # NEW PostgreSQL Configuration
 DATABASES = {
     'default': dj_database_url.config(
-        default=config('DATABASE_URL'),
+        # default=config('DATABASE_URL',
+        #                default='sqlite:///db.sqlite3'),
+        default=config('DATABASE_URL',
+                       default='sqlite:///db.sqlite3'),
         conn_max_age=600,
         conn_health_checks=True,
     )
@@ -98,7 +101,8 @@ DATABASES = {
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': config('REDIS_URL'),
+        'LOCATION': config('REDIS_URL',
+                           default='redis://127.0.0.1:6379/1'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'SOCKET_CONNECT_TIMEOUT': 5,
@@ -318,18 +322,18 @@ os.makedirs(LOGS_DIR, exist_ok=True)
 # ============================================
 # DJANGO AXES - CRON RESET
 # ============================================
-CRONJOBS = [
-    # Reset Axes failed attempts every hour
-    ('0 * * * *', 'axes.cron.reset_failed_login_attempts'),
-    # Reset daily AI quotas at midnight
-    ('0 0 * * *', 'api.cron.reset_daily_quotas'),
-    # Reset monthly AI quotas on 1st of month
-    ('0 0 1 * *', 'api.cron.reset_monthly_quotas'),
-    # Check for suspicious activity every hour
-    ('0 * * * *', 'api.cron.check_suspicious_activity'),
-    # Clean old logs daily at 2 AM
-    ('0 2 * * *', 'api.cron.clean_old_logs'),
-]
+# CRONJOBS = [
+#     # Reset Axes failed attempts every hour
+#     ('0 * * * *', 'axes.cron.reset_failed_login_attempts'),
+#     # Reset daily AI quotas at midnight
+#     ('0 0 * * *', 'api.cron.reset_daily_quotas'),
+#     # Reset monthly AI quotas on 1st of month
+#     ('0 0 1 * *', 'api.cron.reset_monthly_quotas'),
+#     # Check for suspicious activity every hour
+#     ('0 * * * *', 'api.cron.check_suspicious_activity'),
+#     # Clean old logs daily at 2 AM
+#     ('0 2 * * *', 'api.cron.clean_old_logs'),
+# ]
 
 # ============================================
 # SECURITY SETTINGS
@@ -344,7 +348,7 @@ CSRF_COOKIE_SAMESITE = 'Strict'
 
 # In production, enable these:
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000
