@@ -1,4 +1,4 @@
-import { test, expect, vi } from "vitest";
+import { test, expect, vi, beforeEach, afterEach, describe } from "vitest";
 
 // Mock constants BEFORE importing ApiService
 vi.mock("../src/utils/constants", () => ({
@@ -27,7 +27,7 @@ beforeEach(() => {
   localStorageMock.clear.mockClear();
 });
 
-// Register
+// Register Endpoints
 test("loads token from localStorage on init", async () => {
   // Mock localStorage to return a token
   localStorageMock.getItem.mockReturnValue("abc123");
@@ -47,7 +47,7 @@ test("setToken stores token in memory and localStorage", () => {
   expect(localStorageMock.setItem).toHaveBeenCalledWith("accessToken", "xyz");
 });
 
-// Logout
+// Logout Endpoints
 test("clearToken removes token from memory and storage", () => {
   ApiService.setToken("xyz");
 
@@ -128,7 +128,7 @@ test("throws on network failure", async () => {
   await expect(ApiService.request("/jobs")).rejects.toThrow("Network down");
 });
 
-// Jobs
+// Jobs Endpoints
 test("getJobs builds query string correctly", async () => {
   fetch.mockResolvedValue({
     ok: true,
@@ -171,7 +171,7 @@ test("getJob calls correct endpoint", async () => {
   );
 });
 
-// Logout
+// Logout Endpoints
 test("logout clears token", async () => {
   ApiService.setToken("abc");
 
@@ -181,7 +181,7 @@ test("logout clears token", async () => {
   expect(localStorageMock.removeItem).toHaveBeenCalledWith("accessToken");
 });
 
-// Saved Jobs
+// Saved Jobs Endpoints
 describe("SavedJob API", () => {
   beforeEach(() => {
     vi.spyOn(ApiService, "request").mockResolvedValue({});
@@ -216,7 +216,7 @@ describe("SavedJob API", () => {
   });
 });
 
-// Cover Letter
+// Cover Letter Endpoints
 describe("Cover Letter API", () => {
   beforeEach(() => {
     vi.spyOn(ApiService, "request").mockResolvedValue({});
@@ -244,7 +244,7 @@ describe("Cover Letter API", () => {
   });
 });
 
-// Application
+// Application Endpoints
 describe("Applications API", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -291,3 +291,50 @@ describe("Applications API", () => {
     });
   });
 });
+
+// Profile Endpoints
+describe("User Profile API", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("getProfile sends GET request to the correct endpoint", async () => {
+    const mockResponse = { id: 1, username: "john" };
+
+    const requestSpy = vi.spyOn(ApiService, "request").mockResolvedValue(mockResponse);
+
+    const result = await ApiService.getProfile();
+
+    expect(requestSpy).toHaveBeenCalledWith("/users/profile/");
+    expect(result).toEqual(mockResponse);
+  });
+
+  test("updateProfile sends PUT request with serialized profile data", async () => {
+    const mockResponse = { id: 1, username: "john", email: "john@example.com" };
+
+    vi.spyOn(ApiService, "request").mockResolvedValue(mockResponse);
+
+    const profileData = {
+      username: "john",
+      email: "john@example.com",
+    };
+
+    const result = await ApiService.updateProfile(profileData);
+
+    expect(ApiService.request).toHaveBeenCalledWith("/users/profile/", {
+      method: "PUT",
+      body: JSON.stringify(profileData),
+    });
+
+    expect(result).toEqual(mockResponse);
+  });
+
+  test("updateProfile propagates errors thrown by request", async () => {
+    const error = new Error("Update failed");
+    vi.spyOn(ApiService, "request").mockRejectedValue(error);
+
+    await expect(ApiService.updateProfile({ username: "john" })).rejects.toThrow("Update failed");
+  });
+});
+
+
