@@ -1,11 +1,19 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { test, expect, vi, beforeEach } from "vitest";
-import ProfilePage from '../src/pages/Profile/ProfilePage';
+import ProfilePage from '../src/pages/profile/ProfilePage';
 import { useUser } from '../src/components/hooks/useAuth';
+import ApiService from '../src/services/api';
 
 vi.mock('../src/components/hooks/useAuth', () => ({
   useUser: vi.fn(),
+}));
+
+vi.mock('../src/services/api', () => ({
+  default: {
+    getProfile: vi.fn(),
+    updateProfile: vi.fn(),
+  },
 }));
 
 vi.mock('../src/components/profile/ProfileAvatar', () => ({
@@ -28,52 +36,87 @@ vi.mock('../src/components/profile/ProfileForm', () => ({
 }));
 
 const mockUpdateUser = vi.fn();
-const mockUser = { first_name: 'John', profile_picture: 'https://example.com/john.jpg' };
+const mockUser = { first_name: 'Jane', profile_picture: 'https://example.com/jane.jpg' };
 
 beforeEach(() => {
   vi.restoreAllMocks();
   useUser.mockReturnValue({ user: mockUser, updateUser: mockUpdateUser });
   vi.spyOn(window, 'alert').mockImplementation(() => {});
+  ApiService.getProfile.mockResolvedValue(mockUser);
+  ApiService.updateProfile.mockResolvedValue({ first_name: 'Updated' });
 });
 
-test('renders ProfileAvatar with the current user profile picture', () => {
+test('shows a loading state, then fetches the profile via the API on mount', async () => {
   render(<ProfilePage />);
 
-  expect(screen.getByTestId('profile-avatar')).toBeInTheDocument();
-  expect(screen.getByText('https://example.com/john.jpg')).toBeInTheDocument();
-});
+  expect(screen.getByText(/loading profile/i)).toBeInTheDocument();
 
-test('renders ProfileForm with the current user as initialData', () => {
-  render(<ProfilePage />);
+  await waitFor(() => {
+    expect(ApiService.getProfile).toHaveBeenCalledTimes(1);
+  });
 
   expect(screen.getByTestId('profile-form')).toBeInTheDocument();
-  expect(screen.getByText('John')).toBeInTheDocument();
+});
+
+test('updates local user state with fetched profile data', async () => {
+  render(<ProfilePage />);
+
+  await waitFor(() => {
+    expect(mockUpdateUser).toHaveBeenCalledWith(mockUser);
+  });
+});
+
+test('shows an error message if fetching the profile fails', async () => {
+  ApiService.getProfile.mockRejectedValue(new Error('Network error'));
+
+  render(<ProfilePage />);
+
+  await waitFor(() => {
+    expect(screen.getByText(/failed to load profile/i)).toBeInTheDocument();
+  });
+});
+
+test('calls ApiService.updateProfile and updateUser on form submit', async () => {
+  render(<ProfilePage />);
+  await waitFor(() => screen.getByTestId('profile-form'));
+
+  await userEvent.click(screen.getByText('Submit'));
+
+  await waitFor(() => {
+    expect(ApiService.updateProfile).toHaveBeenCalledWith({ first_name: 'Updated' });
+  });
+
+  expect(mockUpdateUser).toHaveBeenCalledWith(
+    expect.objectContaining({ first_name: 'Updated' })
+  );
+  expect(window.alert).toHaveBeenCalledWith('Profile updated successfully!');
+});
+
+test('shows an error alert if updateProfile fails', async () => {
+  ApiService.updateProfile.mockRejectedValue(new Error('Update failed'));
+
+  render(<ProfilePage />);
+  await waitFor(() => screen.getByTestId('profile-form'));
+
+  await userEvent.click(screen.getByText('Submit'));
+
+  await waitFor(() => {
+    expect(window.alert).toHaveBeenCalledWith('Failed to update profile.');
+  });
 });
 
 test('shows an alert when upload is triggered', async () => {
   render(<ProfilePage />);
+  await waitFor(() => screen.getByTestId('profile-form'));
 
   await userEvent.click(screen.getByText('Upload'));
 
   expect(window.alert).toHaveBeenCalledWith('Upload profile picture functionality');
 });
 
-test('calls updateUser with merged data and shows success alert on submit', async () => {
+test('calls onCancel without throwing', async () => {
   render(<ProfilePage />);
-
-  await userEvent.click(screen.getByText('Submit'));
-
-  expect(mockUpdateUser).toHaveBeenCalledWith({
-    ...mockUser,
-    first_name: 'Updated',
-  });
-  expect(window.alert).toHaveBeenCalledWith('Profile updated successfully!');
-});
-
-test('does not throw when cancel is triggered', async () => {
-  render(<ProfilePage />);
+  await waitFor(() => screen.getByTestId('profile-form'));
 
   await userEvent.click(screen.getByText('Cancel'));
-  // onCancel only sets local `editing` state, which isn't reflected
-  // in the current render output, so there's nothing externally to assert.
 });

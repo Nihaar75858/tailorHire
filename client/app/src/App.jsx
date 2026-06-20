@@ -8,6 +8,7 @@ import JobsPage from "./pages/Jobs/JobsPage";
 import Navbar from "./components/Navbar/Navbar";
 import CoverLetterPage from "./pages/CoverLetter/CoverLetterPage";
 import ApplicationsPage from "./pages/Application/ApplicationsPage";
+import ProfilePage from "./pages/Profile/ProfilePage";
 import "./App.css";
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="/coverletter" element={<CoverLetterPage />}/>
         <Route path="/applications" element={<ApplicationsPage />} />
+        <Route path="/profile" element={<ProfilePage />}/>
       </Routes>
     </>
   );
