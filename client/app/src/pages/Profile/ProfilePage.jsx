@@ -1,28 +1,53 @@
 // ============================================
-// src/pages/ProfilePage.jsx
+// src/pages/profile/ProfilePage.jsx
 // ============================================
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProfileAvatar from "../../components/profile/ProfileAvatar";
 import ProfileForm from "../../components/profile/ProfileForm";
 import { useUser } from "../../components/hooks/useAuth";
+import ApiService from "../../services/api";
 
 const ProfilePage = () => {
   const { user, updateUser } = useUser();
   const [editing, setEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  console.log(user)
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        const data = await ApiService.getProfile();
+        console.log(data);
+        updateUser(data);
+      } catch (err) {
+        setError("Failed to load profile", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleSubmit = (formData) => {
-    // In production: call API to update profile
-    updateUser({ ...user, ...formData });
-    setEditing(false);
-    alert("Profile updated successfully!");
+    fetchProfile();
+  }, [updateUser]);
+
+  const handleSubmit = async (formData) => {
+    try {
+      const updated = await ApiService.updateProfile(formData);
+      updateUser({ ...user, ...updated });
+      setEditing(false);
+      alert("Profile updated successfully!");
+    } catch (err) {
+      alert("Failed to update profile.", err);
+    }
   };
 
   const handleUpload = () => {
     alert("Upload profile picture functionality");
-    // In production: implement file upload
   };
+
+  if (loading) {
+    return <p className="text-center text-gray-600 p-6">Loading profile...</p>;
+  }
 
   return (
     <div className="space-y-6 p-6 bg-gradient-to-r from-orange-200 via-orange-400 to-orange-600">
@@ -33,6 +58,8 @@ const ProfilePage = () => {
           </h2>
           <p className="text-gray-600">Manage your professional information</p>
         </div>
+
+        {error && <p className="text-red-600 mb-4">{error}</p>}
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 my-4">
           <ProfileAvatar
