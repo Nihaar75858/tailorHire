@@ -74,4 +74,6 @@ test('does not throw when cancel is triggered', async () => {
   render(<ProfilePage />);
 
   await userEvent.click(screen.getByText('Cancel'));
+  // onCancel only sets local `editing` state, which isn't reflected
+  // in the current render output, so there's nothing externally to assert.
 });
