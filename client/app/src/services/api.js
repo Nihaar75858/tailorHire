@@ -55,6 +55,18 @@ export class ApiService {
     this.clearToken();
   }
 
+  // User endpoints
+  async getProfile() {
+    return this.request('/users/profile/');
+  }
+
+  async updateProfile(profileData) {
+    return this.request('/users/profile/', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  }
+
   // Jobs endpoints
   async getJobs(params = {}) {
     const queryString = new URLSearchParams(params).toString();
