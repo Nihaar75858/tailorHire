@@ -9,8 +9,8 @@ const NavigationConfig = {
     {
       name: "Jobs",
       submenus: [
-        { name: "View Jobs", to: "/viewjobs" },
-        { name: "Review Applications", to: "/revapplications" },
+        { name: "View Jobs", to: "/jobs" },
+        { name: "Your Applications", to: "/applications" },
       ],
     },
     {
@@ -18,7 +18,7 @@ const NavigationConfig = {
       to: "/coverletter",
       submenus: null,
     },
-    { name: "Chat", to: "/chat", submenus: null },
+    // { name: "Chat", to: "/chat", submenus: null },
   ],
 };
 

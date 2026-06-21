@@ -6,8 +6,8 @@ import React, { useState } from "react";
 const ProfileForm = ({ initialData, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState(
     initialData || {
-      first_name: "",
-      last_name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       location: "",
       bio: "",
@@ -40,7 +40,7 @@ const ProfileForm = ({ initialData, onSubmit, onCancel }) => {
               type="text"
               name="first_name"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              value={formData.first_name}
+              value={formData.firstName}
               onChange={handleChange}
             />
           </div>
@@ -52,7 +52,7 @@ const ProfileForm = ({ initialData, onSubmit, onCancel }) => {
               type="text"
               name="last_name"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              value={formData.last_name}
+              value={formData.lastName}
               onChange={handleChange}
             />
           </div>

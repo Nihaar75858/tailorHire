@@ -9,7 +9,6 @@ class CustomUser(AbstractUser):
     lastName = models.CharField(max_length=100)
     username = models.CharField(max_length=100, unique=True)
     email = models.EmailField(unique=True)
-    password = models.CharField(max_length=100)
     bio = models.TextField(blank=True, null=True)
     location = models.CharField(max_length=300, blank=True, null=True)
     skills = models.TextField(blank=True, null=True)

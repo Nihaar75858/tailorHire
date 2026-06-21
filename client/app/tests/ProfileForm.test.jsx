@@ -9,8 +9,8 @@ const mockCancel = vi.fn();
 test('renders all fields empty when no initialData is provided', () => {
   const { container } = render(<ProfileForm onSubmit={mockSubmit} onCancel={mockCancel} />);
 
-  expect(container.querySelector('input[name="first_name"]').value).toBe('');
-  expect(container.querySelector('input[name="last_name"]').value).toBe('');
+  expect(container.querySelector('input[name="firstName"]').value).toBe('');
+  expect(container.querySelector('input[name="lastName"]').value).toBe('');
   expect(container.querySelector('input[name="email"]').value).toBe('');
   expect(container.querySelector('input[name="location"]').value).toBe('');
   expect(container.querySelector('textarea[name="bio"]').value).toBe('');
@@ -19,8 +19,8 @@ test('renders all fields empty when no initialData is provided', () => {
 
 test('pre-fills fields with initialData when provided', () => {
   const initialData = {
-    first_name: 'Jane',
-    last_name: 'Doe',
+    firstName: 'Jane',
+    lastName: 'Doe',
     email: 'jane@example.com',
     location: 'Remote',
     bio: 'Frontend dev',
@@ -31,7 +31,7 @@ test('pre-fills fields with initialData when provided', () => {
     <ProfileForm initialData={initialData} onSubmit={mockSubmit} onCancel={mockCancel} />
   );
 
-  expect(container.querySelector('input[name="first_name"]').value).toBe('Jane');
+  expect(container.querySelector('input[name="firstName"]').value).toBe('Jane');
   expect(container.querySelector('input[name="email"]').value).toBe('jane@example.com');
   expect(container.querySelector('textarea[name="bio"]').value).toBe('Frontend dev');
 });
@@ -39,7 +39,7 @@ test('pre-fills fields with initialData when provided', () => {
 test('updates field value as the user types', async () => {
   const { container } = render(<ProfileForm onSubmit={mockSubmit} onCancel={mockCancel} />);
 
-  const firstNameInput = container.querySelector('input[name="first_name"]');
+  const firstNameInput = container.querySelector('input[name="firstName"]');
   await userEvent.type(firstNameInput, 'Alice');
 
   expect(firstNameInput.value).toBe('Alice');
@@ -48,13 +48,13 @@ test('updates field value as the user types', async () => {
 test('calls onSubmit with current form data when Save Changes is clicked', async () => {
   const { container } = render(<ProfileForm onSubmit={mockSubmit} onCancel={mockCancel} />);
 
-  const firstNameInput = container.querySelector('input[name="first_name"]');
+  const firstNameInput = container.querySelector('input[name="firstName"]');
   await userEvent.type(firstNameInput, 'Bob');
 
   await userEvent.click(screen.getByText(/save changes/i));
 
   expect(mockSubmit).toHaveBeenCalledWith(
-    expect.objectContaining({ first_name: 'Bob' })
+    expect.objectContaining({ firstName: 'Bob' })
   );
 });
 

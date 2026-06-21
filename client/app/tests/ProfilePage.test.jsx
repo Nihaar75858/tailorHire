@@ -11,7 +11,6 @@ vi.mock('../src/components/hooks/useAuth', () => ({
 
 vi.mock('../src/services/api', () => ({
   default: {
-    getProfile: vi.fn(),
     updateProfile: vi.fn(),
   },
 }));
@@ -42,28 +41,25 @@ beforeEach(() => {
   vi.restoreAllMocks();
   useUser.mockReturnValue({ user: mockUser, updateUser: mockUpdateUser });
   vi.spyOn(window, 'alert').mockImplementation(() => {});
-  ApiService.getProfile.mockResolvedValue(mockUser);
   ApiService.updateProfile.mockResolvedValue({ first_name: 'Updated' });
 });
 
-test('shows a loading state, then fetches the profile via the API on mount', async () => {
+test('shows a loading state while the context is still loading', async () => {
+  useUser.mockReturnValue({ user: null, updateUser: mockUpdateUser, loading: true });
+
   render(<ProfilePage />);
 
   expect(screen.getByText(/loading profile/i)).toBeInTheDocument();
-
-  await waitFor(() => {
-    expect(ApiService.getProfile).toHaveBeenCalledTimes(1);
-  });
-
-  expect(screen.getByTestId('profile-form')).toBeInTheDocument();
+  expect(screen.queryByTestId('profile-form')).not.toBeInTheDocument();
 });
 
-test('updates local user state with fetched profile data', async () => {
+test('renders ProfileAvatar and ProfileForm once loading is complete', async () => {
   render(<ProfilePage />);
 
-  await waitFor(() => {
-    expect(mockUpdateUser).toHaveBeenCalledWith(mockUser);
-  });
+  expect(screen.getByTestId('profile-avatar')).toBeInTheDocument();
+  expect(screen.getByText('https://example.com/jane.jpg')).toBeInTheDocument();
+  expect(screen.getByTestId('profile-form')).toBeInTheDocument();
+  expect(screen.getByText('Jane')).toBeInTheDocument();
 });
 
 test('shows an error message if fetching the profile fails', async () => {
@@ -78,7 +74,6 @@ test('shows an error message if fetching the profile fails', async () => {
 
 test('calls ApiService.updateProfile and updateUser on form submit', async () => {
   render(<ProfilePage />);
-  await waitFor(() => screen.getByTestId('profile-form'));
 
   await userEvent.click(screen.getByText('Submit'));
 
@@ -96,7 +91,6 @@ test('shows an error alert if updateProfile fails', async () => {
   ApiService.updateProfile.mockRejectedValue(new Error('Update failed'));
 
   render(<ProfilePage />);
-  await waitFor(() => screen.getByTestId('profile-form'));
 
   await userEvent.click(screen.getByText('Submit'));
 
@@ -107,7 +101,6 @@ test('shows an error alert if updateProfile fails', async () => {
 
 test('shows an alert when upload is triggered', async () => {
   render(<ProfilePage />);
-  await waitFor(() => screen.getByTestId('profile-form'));
 
   await userEvent.click(screen.getByText('Upload'));
 
@@ -116,7 +109,6 @@ test('shows an alert when upload is triggered', async () => {
 
 test('calls onCancel without throwing', async () => {
   render(<ProfilePage />);
-  await waitFor(() => screen.getByTestId('profile-form'));
 
   await userEvent.click(screen.getByText('Cancel'));
 });

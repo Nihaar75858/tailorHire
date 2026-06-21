@@ -26,7 +26,6 @@ export default function Login() {
       });
 
       const data = await response.json();
-      console.log("Response from server:", data);
 
       if (!response.ok) {
         alert(data.error || "Login failed!");
@@ -36,7 +35,6 @@ export default function Login() {
       saveTokens(data.access, data.refresh);
 
       alert("Login successful!");
-      console.log("Login successful:", data);
 
       navigate("/userdashboard");
     } catch (error) {

@@ -7,17 +7,8 @@ export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userType, setUserType] = useState("Viewer");
   const [access, setAccess] = useState(getAccessToken());
+  const [loading, setLoading] = useState(true);
 
-  // Watch for token changes (login/logout)
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     const currentAccess = getAccessToken();
-  //     if (currentAccess !== access) {
-  //       setAccess(currentAccess);
-  //     }
-  //   }, 500);
-  //   return () => clearInterval(interval);
-  // }, [access]);
   useEffect(() => {
     setAccess(getAccessToken());
   }, [])
@@ -28,10 +19,12 @@ export const UserProvider = ({ children }) => {
       if (!access) {
         setUser(null);
         setUserType("Viewer");
+        setLoading(false);
         return;
       }
 
       try {
+        setLoading(true);
         const res = await fetch(
           `${import.meta.env.VITE_API_BASE_URL}/users/profile/`,
           {
@@ -59,16 +52,16 @@ export const UserProvider = ({ children }) => {
         console.error("Error fetching user profile:", err);
         setUser(null);
         setUserType("Viewer");
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchUser();
   }, [access]);
 
-  console.log(userType);
-
   return (
-    <UserContext.Provider value={{ user, userType, setUser }}>
+    <UserContext.Provider value={{ user, userType, setUser, updateUser: setUser, loading }}>
       {children}
     </UserContext.Provider>
   );

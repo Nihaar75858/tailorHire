@@ -21,16 +21,10 @@ import { Link } from 'react-router-dom'
 
 const Navbar = () => {
   const { userType } = useUser();
-  console.log(userType);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false) // NEW: for right-hand sidebar
 
-  const roleMap = {
-    Viewer: 0,
-    User: 1,
-  }
-
-  const navLinks = getNavigationConfig(roleMap[userType] ?? 0)
+  const navLinks = getNavigationConfig(userType ?? 0)
 
   const handleLogout = () => {
     localStorage.clear(); // or remove only the keys you need
