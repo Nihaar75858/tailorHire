@@ -42,7 +42,7 @@ describe("Register Component", () => {
     expect(passwordFields[1]).toBeInTheDocument();
   });
 
-  it("submits form data correctly and navigates to login", async () => {
+  it("submits form data correctly with default role and navigates to login", async () => {
     const mockResponse = { message: "Registration successful!" };
     fetch.mockResolvedValueOnce({
       ok: true,
@@ -81,10 +81,65 @@ describe("Register Component", () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            role: [1],
             firstName: "John",
             lastName: "Doe",
             email: "john@example.com",
             username: "johndoe",
+            password: "pass123",
+          }),
+        })
+      )
+    );
+    expect(mockNavigate).toHaveBeenCalledWith("/login");
+  });
+
+  it("submits form data with role [2] when Recruiter is selected", async () => {
+    const mockResponse = { message: "Registration successful!" };
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse,
+    });
+
+    render(
+      <BrowserRouter>
+        <Register />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Recruiter" }));
+
+    fireEvent.change(screen.getByPlaceholderText(/First Name/i), {
+      target: { value: "Jane", name: "firstName" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Last Name/i), {
+      target: { value: "Smith", name: "lastName" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Email/i), {
+      target: { value: "jane@example.com", name: "email" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Username/i), {
+      target: { value: "janesmith", name: "username" },
+    });
+    const [passwordInput, confirmInput] =
+      screen.getAllByPlaceholderText(/Password/i);
+    fireEvent.change(passwordInput, { target: { value: "pass123" } });
+    fireEvent.change(confirmInput, { target: { value: "pass123" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /register/i }));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000/api/users/",
+        expect.objectContaining({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            role: [2],
+            firstName: "Jane",
+            lastName: "Smith",
+            email: "jane@example.com",
+            username: "janesmith",
             password: "pass123",
           }),
         })

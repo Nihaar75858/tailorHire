@@ -5,7 +5,6 @@ describe("getNavigationConfig()", () => {
   it("returns viewer config (index 0) when userType is 0 or unknown", () => {
     const config0 = getNavigationConfig(0);
     const configUnknown = getNavigationConfig(999);
-
     expect(config0).toEqual([{}]);
     expect(configUnknown).toEqual([{}]);
   });
@@ -13,18 +12,21 @@ describe("getNavigationConfig()", () => {
   it("returns user navigation config when userType is 1", () => {
     const config = getNavigationConfig(1);
 
+    // Top-level items
     expect(config).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: "Home", to: "/userdashboard" }),
-        expect.objectContaining({ name: "Chat", to: "/chat" }),
+        expect.objectContaining({ name: "Cover Letter", to: "/coverletter" }),
       ])
     );
 
-    // Ensure nested submenus exist
+    // Nested submenus under "Jobs"
     const jobsMenu = config.find((i) => i.name === "Jobs");
+    expect(jobsMenu).toBeDefined();
     expect(jobsMenu.submenus).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: "View Jobs", to: "/viewjobs" }),
+        expect.objectContaining({ name: "View Jobs", to: "/jobs" }),
+        expect.objectContaining({ name: "Your Applications", to: "/applications" }),
       ])
     );
   });

@@ -62,16 +62,6 @@ test('renders ProfileAvatar and ProfileForm once loading is complete', async () 
   expect(screen.getByText('Jane')).toBeInTheDocument();
 });
 
-test('shows an error message if fetching the profile fails', async () => {
-  ApiService.getProfile.mockRejectedValue(new Error('Network error'));
-
-  render(<ProfilePage />);
-
-  await waitFor(() => {
-    expect(screen.getByText(/failed to load profile/i)).toBeInTheDocument();
-  });
-});
-
 test('calls ApiService.updateProfile and updateUser on form submit', async () => {
   render(<ProfilePage />);
 

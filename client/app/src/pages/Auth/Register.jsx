@@ -149,7 +149,6 @@ export default function Register() {
               required
             />
             <button
-              onClick={() => navigate("/")}
               type="submit"
               name="register"
               className="w-full bg-white text-black py-2 rounded-md hover:bg-black hover:text-white transition duration-200"

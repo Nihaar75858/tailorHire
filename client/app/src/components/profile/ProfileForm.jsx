@@ -38,7 +38,7 @@ const ProfileForm = ({ initialData, onSubmit, onCancel }) => {
             </label>
             <input
               type="text"
-              name="first_name"
+              name="firstName"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               value={formData.firstName}
               onChange={handleChange}
@@ -50,7 +50,7 @@ const ProfileForm = ({ initialData, onSubmit, onCancel }) => {
             </label>
             <input
               type="text"
-              name="last_name"
+              name="lastName"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               value={formData.lastName}
               onChange={handleChange}
