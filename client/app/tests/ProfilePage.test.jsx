@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { test, expect, vi, beforeEach } from "vitest";
-import ProfilePage from '../src/pages/profile/ProfilePage';
+import ProfilePage from '../src/pages/Profile/ProfilePage';
 import { useUser } from '../src/components/hooks/useAuth';
 import ApiService from '../src/services/api';
 
