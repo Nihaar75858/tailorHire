@@ -1,4 +1,6 @@
 import pytest
+from datetime import timedelta
+from django.utils import timezone
 from django.urls import reverse
 from unittest.mock import patch
 from rest_framework.test import APIRequestFactory
@@ -14,17 +16,22 @@ from api.throttling import (
     AIServiceThrottle
 )
 from api.models import Job
+from django.core.cache import cache
 
 User = get_user_model()
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(
-        username="recruiter", 
+    u = User.objects.create_user(
+        username="recruiter",
         email="test@test.com",
-        password="pass1234", 
+        password="pass1234",
         skills="Python, Django"
     )
+    # Backdate so AI-gated endpoints (require_verified_user) don't reject by default
+    u.date_joined = timezone.now() - timedelta(hours=2)
+    u.save()
+    return u
 
 @pytest.fixture
 def api_client():
@@ -38,14 +45,18 @@ def auth_client(user):
 
 @pytest.fixture
 def create_user():
-    def _create_user(**params):
+    def _create_user(verified=True, **params):
         defaults = {
             "username": "testuser",
             "email": "test@test.com",
             "password": "hello123"
         }
         defaults.update(params)
-        return User.objects.create_user(**defaults)
+        new_user = User.objects.create_user(**defaults)
+        if verified:
+            new_user.date_joined = timezone.now() - timedelta(hours=2)
+            new_user.save()
+        return new_user
     return _create_user
 
 @pytest.fixture
@@ -59,7 +70,7 @@ def job(user):
         requirements=["Python", "Django"],
         posted_by=user
     )
-    
+
 @pytest.fixture
 def saved_job_url():
     return reverse("saved-job-list")
@@ -108,3 +119,9 @@ def daily_ai_throttle():
 @pytest.fixture
 def anon_strict_throttle():
     return make_throttle(AnonymousStrictThrottle, rate="5/hour")
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    cache.clear()
+    yield
+    cache.clear()

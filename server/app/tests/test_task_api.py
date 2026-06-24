@@ -1,10 +1,11 @@
 from rest_framework import status
 from django.urls import reverse
+from datetime import timedelta
+from django.utils import timezone
 from pathlib import Path
 from api import models
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
-from api.serializer import UserSerializer
 import pytest
 import json
 from .test_utils import HuggingFaceAI
@@ -145,22 +146,25 @@ class TestJobViewSet:
         url = reverse("job-list")
         response = auth_client.get(url)
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) > 0
-        assert response.data[0]["title"] == job.title
+        results = response.data["results"]
+        assert len(results) > 0
+        assert results[0]["title"] == job.title
 
     def test_filter_jobs_by_location(self, auth_client, job):
         """Should filter jobs by location"""
         url = reverse("job-list") + "?location=Remote"
         response = auth_client.get(url)
         assert response.status_code == 200
-        assert all("Remote" in j["location"] for j in response.data)
+        results = response.data["results"]
+        assert all("Remote" in j["location"] for j in results)
 
     def test_filter_jobs_by_type(self, auth_client, job):
         """Should filter jobs by job type"""
         url = reverse("job-list") + "?job_type=full-time"
         response = auth_client.get(url)
         assert response.status_code == 200
-        assert all(j["job_type"] == "full-time" for j in response.data)
+        results = response.data["results"]
+        assert all(j["job_type"] == "full-time" for j in results)
 
     def test_create_job_authenticated(self, auth_client):
         """Should allow authenticated user to create job"""
@@ -203,7 +207,7 @@ class TestJobViewSet:
         url = reverse("job-recommended")
         response = auth_client.get(url)
         assert response.status_code == 400
-        assert "update your skills" in response.data["detail"].lower()
+        assert "update your skills" in response.data["message"].lower()
 
 #########################
 # Saved Job Views Tests
@@ -220,8 +224,9 @@ class TestSavedJobViewSet:
         response = auth_client.get(reverse("saved-job-list"))
 
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
-        assert response.data[0]["job"] == job.id
+        results = response.data["results"]
+        assert len(results) == 1
+        assert results[0]["job"] == job.id
 
     def test_create_saved_job(
         self, auth_client, user, job
@@ -300,6 +305,8 @@ class TestCoverLetterAPI:
         self, api_client, create_user, monkeypatch
     ):
         user = create_user()
+        user.date_joined = timezone.now() - timedelta(hours=2)
+        user.save()
         api_client.force_authenticate(user=user)
 
         url = reverse("cover-letter-list")
@@ -314,7 +321,7 @@ class TestCoverLetterAPI:
         )
 
         payload = {
-            "job_description": "Backend role",
+            "job_description": "We are looking for a Backend Developer with strong experience in Python and Django to join our growing team.",
             "resume_text": "Python developer"
         }
 
@@ -329,6 +336,8 @@ class TestCoverLetterAPI:
         self, api_client, create_user
     ):
         user = create_user()
+        user.date_joined = timezone.now() - timedelta(hours=2)
+        user.save()
         api_client.force_authenticate(user=user)
 
         url = reverse("cover-letter-list")
@@ -365,13 +374,16 @@ class TestCoverLetterAPI:
         res = api_client.get(url)
 
         assert res.status_code == status.HTTP_200_OK
-        assert len(res.data) == 1
-        assert res.data[0]["job_description"] == "Desc1"
+        results = res.data["results"]
+        assert len(results) == 1
+        assert results[0]["job_description"] == "Desc1"
 
     def test_create_with_job_id(
         self, api_client, create_user, monkeypatch
     ):
         user = create_user()
+        user.date_joined = timezone.now() - timedelta(hours=2)
+        user.save()
         api_client.force_authenticate(user=user)
 
         job = models.Job.objects.create(
@@ -397,7 +409,7 @@ class TestCoverLetterAPI:
         url = reverse("cover-letter-list")
 
         payload = {
-            "job_description": "Backend role",
+            "job_description": "We are looking for a Backend Developer with strong experience in Python and Django to join our growing team.",
             "resume_text": "Python dev",
             "job": job.id
         }
@@ -432,8 +444,9 @@ def test_user_sees_only_their_applications(api_client):
     response = api_client.get(url)
 
     assert response.status_code == 200
-    assert len(response.data) == 1
-    assert response.data[0]["id"] == app1.id
+    results = response.data["results"]
+    assert len(results) == 1
+    assert results[0]["id"] == app1.id
     
 @pytest.mark.django_db
 def test_admin_sees_all_applications(api_client):
@@ -451,7 +464,8 @@ def test_admin_sees_all_applications(api_client):
     response = api_client.get(url)
 
     assert response.status_code == 200
-    assert len(response.data) == 2
+    results = response.data["results"]
+    assert len(results) == 2
     
 @pytest.mark.django_db
 def test_user_can_create_application(api_client):

@@ -4,8 +4,9 @@ from .serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJ
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets, status, filters, serializers
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from .throttling import (
     CoverLetterThrottle, ChatMessageThrottle, 
     JobRecommendationThrottle, BurstRateThrottle,
@@ -101,8 +102,7 @@ class JobViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(posted_by=self.request.user)
 
-    @require_verified_user
-    @log_ai_usage
+    @method_decorator([require_verified_user, log_ai_usage])
     @action(detail=False, methods=['get'])
     def recommended(self, request):
         """Get AI-recommended jobs based on user skills"""
@@ -183,11 +183,15 @@ class CoverLetterViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     throttle_classes = [CoverLetterThrottle, BurstRateThrottle, DailyAILimitThrottle]
     
+    def get_throttles(self):
+        if self.action == 'create':
+            return [throttle() for throttle in self.throttle_classes]
+        return []
+    
     def get_queryset(self):
         return CoverLetter.objects.filter(user=self.request.user)
     
-    @require_verified_user
-    @log_ai_usage
+    @method_decorator([require_verified_user, log_ai_usage])
     def create(self, request):
         """Generate AI cover letter"""
         job_description = request.data.get('job_description')
@@ -204,7 +208,7 @@ class CoverLetterViewSet(viewsets.ModelViewSet):
         try:
             job_description = ContentValidator.validate_job_description(job_description)
             resume_text = ContentValidator.validate_resume_text(resume_text)
-        except serializer.ValidationError as e:
+        except serializers.ValidationError as e:
             return Response({
                 'error': 'Validation failed',
                 'message': str(e)
