@@ -1,7 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
 from api.utils import HuggingFaceAI
-from sentence_transformers import SentenceTransformer, util
 
 #########################
 # Cover Letter Tests
@@ -9,11 +8,11 @@ from sentence_transformers import SentenceTransformer, util
 def test_generate_cover_letter_success(monkeypatch):
     mock_response = MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = [{"generated_text": "This is a great cover letter."}]
-    
+    mock_response.json.return_value = [{"summary_text": "This is a great cover letter."}]
+
     def mock_post(*args, **kwargs):
         return mock_response
-    
+
     monkeypatch.setattr("api.utils.requests.post", mock_post)
 
     ai = HuggingFaceAI()
@@ -24,14 +23,14 @@ def test_generate_cover_letter_success(monkeypatch):
     )
 
     assert "great cover letter" in result
-    
+
 def test_generate_cover_letter_fallback_on_error(monkeypatch):
     mock_response = MagicMock()
     mock_response.status_code = 500
-    
+
     def mock_post(*args, **kwargs):
         return mock_response
-    
+
     monkeypatch.setattr("api.utils.requests.post", mock_post)
 
     ai = HuggingFaceAI()
@@ -53,7 +52,7 @@ def test_generate_chat_response_success(monkeypatch):
     mock_response.json.return_value = [{"generated_text": "Bot: Hello, how can I help?"}]
     def mock_post(*args, **kwargs):
         return mock_response
-    
+
     monkeypatch.setattr("api.utils.requests.post", mock_post)
 
     ai = HuggingFaceAI()
@@ -81,19 +80,19 @@ class MockJob:
 def test_recommend_jobs(monkeypatch):
     mock_encoder = MagicMock()
     mock_encoder.encode.return_value = "embedding"
-    
-    monkeypatch.setattr("api.utils.JOB_EMBEDDING_MODEL", mock_encoder)
+
+    monkeypatch.setattr("api.utils._get_job_embedding_model", lambda: mock_encoder)
 
     mock_similarity = MagicMock()
     mock_similarity.item.return_value = 0.9
 
     monkeypatch.setattr(
-        "api.utils.util.pytorch_cos_sim",
+        "api.utils._cosine_similarity",
         lambda *args, **kwargs: mock_similarity
     )
 
     ai = HuggingFaceAI()
-    
+
     jobs = [
         MockJob("Backend Developer", "Python Django APIs", ["REST", "SQL"]),
         MockJob("Frontend Developer", "React JavaScript", ["CSS"])
@@ -103,4 +102,3 @@ def test_recommend_jobs(monkeypatch):
 
     assert len(result) == 2
     assert isinstance(result[0], MockJob)
-

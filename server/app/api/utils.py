@@ -1,37 +1,48 @@
 import requests
 from django.conf import settings
-from sentence_transformers import SentenceTransformer, util
-import torch
 
-# Call the model once per process
-JOB_EMBEDDING_MODEL = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+_job_embedding_model = None
+
+def _get_job_embedding_model():
+    """Lazily load and cache the sentence-transformers embedding model."""
+    global _job_embedding_model
+    if _job_embedding_model is None:
+        from sentence_transformers import SentenceTransformer
+        _job_embedding_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+    return _job_embedding_model
+
+def _cosine_similarity(embedding_a, embedding_b):
+    """Lazily import sentence_transformers.util and compute similarity."""
+    from sentence_transformers import util
+    return util.pytorch_cos_sim(embedding_a, embedding_b)
 
 class HuggingFaceAI:
     def __init__(self):
         self.api_key = settings.HUGGINGFACE_API_KEY
-        self.api_url = "https://api-inference.huggingface.co/models/"
-        
+        self.api_url = "https://router.huggingface.co/hf-inference/models/"
+
     def generate_cover_letter(self, resume_text, job_description, user_profile):
         """Generate cover letter using Hugging Face API"""
         try:
-            model = "facebook/bart-large-cnn"
+            # model = "facebook/bart-large-cnn"
+            model = "Qwen/Qwen3-4B-Instruct-2507"
             headers = {"Authorization": f"Bearer {self.api_key}"}
-            
+
             prompt = f"""
             Generate a professional cover letter based on the following:
-            
+
             Candidate Profile:
             Name: {user_profile.get('name', '')}
             Skills: {user_profile.get('skills', '')}
             Bio: {user_profile.get('bio', '')}
-            
+
             Job Description:
             {job_description}
-            
+
             Resume Summary:
             {resume_text[:500] if resume_text else 'Not provided'}
             """
-            
+
             payload = {
                 "inputs": prompt,
                 "parameters": {
@@ -41,29 +52,30 @@ class HuggingFaceAI:
                     "temperature": 0.7
                 }
             }
-            
+
             response = requests.post(
                 f"{self.api_url}{model}",
                 headers=headers,
                 json=payload,
                 timeout=30
             )
-            
+
             if response.status_code == 200:
                 result = response.json()
-                return result[0].get('generated_text', '')
+                # Summarization task returns 'summary_text', not 'generated_text'
+                return result[0].get('summary_text', '')
             else:
                 return self._generate_fallback_cover_letter(user_profile, job_description)
-                
+
         except Exception as e:
             print(f"Error generating cover letter: {str(e)}")
             return self._generate_fallback_cover_letter(user_profile, job_description)
-    
+
     def _generate_fallback_cover_letter(self, user_profile, job_description):
         """Fallback cover letter generation"""
         name = user_profile.get('name', 'Applicant')
         skills = user_profile.get('skills', 'various technical skills')
-        
+
         return f"""Respected Hiring Manager,
 
 I am writing to express my strong interest in the position at your esteemed organization. With my background in {skills} and proven track record in the field, I am confident I would be a valuable addition to your team.
@@ -78,19 +90,28 @@ Sincerely,
 {name}"""
 
     def generate_chat_response(self, user_message, conversation_history=None):
-        """Generate AI chat response using Hugging Face"""
+        """Generate AI chat response using Hugging Face
+
+        NOTE: Qwen3-4B-Instruct-2507 is a chat/instruct model. This sends a
+        manually-built "User: ...\\nBot:" prompt to the raw task-based
+        endpoint, which is the older pattern used for non-chat models (e.g.
+        summarization). Whether this provider/endpoint accepts that format
+        for a chat model — vs. requiring /v1/chat/completions with a proper
+        `messages` array — hasn't been confirmed against the live API yet.
+        Worth a real test call before relying on this in production.
+        """
         try:
-            model = "facebook/blenderbot-400M-distill"
+            model = "Qwen/Qwen3-4B-Instruct-2507"
             headers = {"Authorization": f"Bearer {self.api_key}"}
-            
+
             context = ""
             if conversation_history:
                 recent = conversation_history[:3]
-                context = "\n".join([f"User: {msg['message']}\nBot: {msg['response']}" 
+                context = "\n".join([f"User: {msg['message']}\nBot: {msg['response']}"
                                     for msg in recent])
-            
+
             prompt = f"{context}\nUser: {user_message}\nBot:"
-            
+
             payload = {
                 "inputs": prompt,
                 "parameters": {
@@ -99,24 +120,24 @@ Sincerely,
                     "top_p": 0.9
                 }
             }
-            
+
             response = requests.post(
                 f"{self.api_url}{model}",
                 headers=headers,
                 json=payload,
                 timeout=30
             )
-            
+
             if response.status_code == 200:
                 result = response.json()
                 return result[0].get('generated_text', '').split('Bot:')[-1].strip()
             else:
                 return self._generate_fallback_response(user_message)
-                
+
         except Exception as e:
             print(f"Error generating chat response: {str(e)}")
             return self._generate_fallback_response(user_message)
-    
+
     def _generate_fallback_response(self, user_message):
         """Fallback chat responses"""
         responses = {
@@ -125,35 +146,33 @@ Sincerely,
             'salary': "For salary negotiations: 1) Research market rates for your role and location, 2) Consider total compensation including benefits, 3) Wait for the offer before discussing numbers, 4) Be prepared to justify your requested salary.",
             'career': "For career growth: 1) Set clear short and long-term goals, 2) Continuously learn new skills, 3) Network actively in your industry, 4) Seek mentorship and feedback.",
         }
-        
+
         message_lower = user_message.lower()
         for key, response in responses.items():
             if key in message_lower:
                 return response
-        
+
         return "Thank you for your question. I'm here to help with career advice, interview preparation, resume tips, and job search strategies. What specific aspect would you like to discuss?"
 
     def recommend_jobs(self, user_skills, jobs):
         """Recommend jobs based on skill similarity"""
         try:
-            # from sentence_transformers import SentenceTransformer, util
-            
-            model = JOB_EMBEDDING_MODEL
-            
+            model = _get_job_embedding_model()
+
             skill_embedding = model.encode(user_skills, convert_to_tensor=True)
-            
+
             job_scores = []
             for job in jobs:
                 job_text = f"{job.title} {job.description} {' '.join(job.requirements)}"
                 job_embedding = model.encode(job_text, convert_to_tensor=True)
-                
-                similarity = util.pytorch_cos_sim(skill_embedding, job_embedding).item()
+
+                similarity = _cosine_similarity(skill_embedding, job_embedding).item()
                 job_scores.append((job, similarity))
-            
+
             job_scores.sort(key=lambda x: x[1], reverse=True)
-            
+
             return [job for job, score in job_scores[:10]]
-            
+
         except Exception as e:
             print(f"Error recommending jobs: {str(e)}")
             return jobs[:10]
