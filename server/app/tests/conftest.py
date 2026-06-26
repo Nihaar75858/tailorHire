@@ -17,6 +17,24 @@ from api.throttling import (
 )
 from api.models import Job
 from django.core.cache import cache
+from django.test import override_settings
+
+@pytest.fixture(scope="session", autouse=True)
+def _use_locmem_cache_for_tests():
+    """
+    CI has no Redis service running, and Django's cache framework has no
+    automatic localhost-fallback the way dj_database_url does for DATABASE_URL.
+    Swap to an in-memory cache for the whole test session so throttle/cache
+    tests don't require a real Redis instance.
+    """
+    with override_settings(
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            }
+        }
+    ):
+        yield
 
 User = get_user_model()
 
