@@ -3,7 +3,6 @@ app/profiles
 app/profile
 app/db.sqlite3
 app/logs
-app/api/migrations
 db.sqlite3
 *.sqlite3
 .git
