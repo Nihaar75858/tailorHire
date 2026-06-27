@@ -180,3 +180,19 @@ class Application(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.job.title}"
+    
+class ChatMessage(models.Model):
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='chat_messages'
+    )
+    message = models.TextField(blank=False)
+    response = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username}: {self.message[:50]}"
