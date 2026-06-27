@@ -1,6 +1,6 @@
 import pytest
 import django.db
-from api.models import CustomUser, Job, SavedJob, CoverLetter, Application
+from api.models import CustomUser, Job, SavedJob, CoverLetter, Application, ChatMessage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
 from decimal import Decimal
@@ -426,3 +426,57 @@ def test_resume_invalid_extension():
 
     with pytest.raises(ValidationError):
         application.full_clean()
+        
+#########################
+# ChatMessage Model Tests
+#########################
+@pytest.mark.django_db
+class TestChatMessageModel:
+
+    def test_create_chat_message(self, user):
+        """A chat message can be created with a user and message text"""
+        chat_message = ChatMessage.objects.create(
+            user=user,
+            message="What skills should I highlight for a backend role?"
+        )
+
+        assert chat_message.user == user
+        assert chat_message.message == "What skills should I highlight for a backend role?"
+        assert chat_message.response == ""
+        assert chat_message.created_at is not None
+
+    def test_response_defaults_to_empty_before_ai_replies(self, user):
+        """response shouldn't be required at creation -- the AI fills it in later"""
+        chat_message = ChatMessage.objects.create(user=user, message="Hello")
+
+        assert chat_message.response == ""
+
+    def test_response_can_be_updated_after_creation(self, user):
+        """Simulates the view filling in the AI response after generation"""
+        chat_message = ChatMessage.objects.create(user=user, message="Hello")
+        chat_message.response = "Hi! How can I help with your job search?"
+        chat_message.save()
+
+        chat_message.refresh_from_db()
+        assert chat_message.response == "Hi! How can I help with your job search?"
+
+    def test_message_cannot_be_blank(self, user):
+        """message is required content -- blank should fail validation"""
+        chat_message = ChatMessage(user=user, message="")
+
+        with pytest.raises(ValidationError):
+            chat_message.full_clean()
+
+    def test_chat_messages_deleted_when_user_deleted(self, user):
+        """Deleting a user should cascade-delete their chat messages"""
+        ChatMessage.objects.create(user=user, message="Hello")
+
+        user.delete()
+
+        assert ChatMessage.objects.count() == 0
+
+    def test_created_at_is_auto_set(self, user):
+        """created_at should be automatically populated on creation"""
+        chat_message = ChatMessage.objects.create(user=user, message="Hello")
+
+        assert chat_message.created_at is not None
