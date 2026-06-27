@@ -2,8 +2,8 @@ import pytest
 import django.db
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth.models import Group
-from api.models import CustomUser, Job, SavedJob, CoverLetter, Application
-from api.serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJobSerializer, CoverLetterSerializer, ApplicationSerializer
+from api.models import CustomUser, Job, SavedJob, CoverLetter, Application, ChatMessage
+from api.serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJobSerializer, CoverLetterSerializer, ApplicationSerializer, ChatMessageSerializer
 
 #########################
 # User Serializer Tests
@@ -435,3 +435,85 @@ def test_duplicate_application_fails():
 
     with pytest.raises(Exception):
         serializer.save(user=user)
+        
+#########################
+# ChatMessage Serializer Tests
+#########################
+@pytest.mark.django_db
+class TestChatMessageSerializer:
+
+    def test_contains_expected_fields(self, user):
+        chat_message = ChatMessage.objects.create(
+            user=user,
+            message="What skills should I highlight?",
+            response="Focus on your strongest technical skills."
+        )
+        serializer = ChatMessageSerializer(chat_message)
+
+        assert set(serializer.data.keys()) == {"id", "message", "response", "created_at"}
+
+    def test_user_field_is_not_exposed(self, user):
+        """user is set by the view from request.user, not the client -- shouldn't appear in output"""
+        chat_message = ChatMessage.objects.create(user=user, message="Hello")
+        serializer = ChatMessageSerializer(chat_message)
+
+        assert "user" not in serializer.data
+
+    def test_message_is_required_and_writable(self):
+        serializer = ChatMessageSerializer(data={"message": "How do I negotiate salary?"})
+
+        assert serializer.is_valid(), serializer.errors
+        assert serializer.validated_data["message"] == "How do I negotiate salary?"
+
+    def test_blank_message_is_invalid(self):
+        serializer = ChatMessageSerializer(data={"message": ""})
+
+        assert not serializer.is_valid()
+        assert "message" in serializer.errors
+
+    def test_missing_message_is_invalid(self):
+        serializer = ChatMessageSerializer(data={})
+
+        assert not serializer.is_valid()
+        assert "message" in serializer.errors
+
+    def test_response_field_is_read_only(self):
+        """Client-supplied response should be silently ignored, not saved"""
+        serializer = ChatMessageSerializer(data={
+            "message": "Hello",
+            "response": "Client-injected response"
+        })
+
+        assert serializer.is_valid(), serializer.errors
+        assert "response" not in serializer.validated_data
+
+    def test_created_at_field_is_read_only(self):
+        """Client-supplied created_at should be silently ignored, not saved"""
+        serializer = ChatMessageSerializer(data={
+            "message": "Hello",
+            "created_at": "2020-01-01T00:00:00Z"
+        })
+
+        assert serializer.is_valid(), serializer.errors
+        assert "created_at" not in serializer.validated_data
+
+    def test_id_field_is_read_only(self):
+        """id should never be settable by client input"""
+        serializer = ChatMessageSerializer(data={
+            "message": "Hello",
+            "id": 9999
+        })
+
+        assert serializer.is_valid(), serializer.errors
+        assert "id" not in serializer.validated_data
+
+    def test_save_creates_instance_with_user_passed_explicitly(self, user):
+        """Mirrors how the view will call serializer.save(user=request.user)"""
+        serializer = ChatMessageSerializer(data={"message": "Hello"})
+        assert serializer.is_valid(), serializer.errors
+
+        chat_message = serializer.save(user=user)
+
+        assert chat_message.user == user
+        assert chat_message.message == "Hello"
+        assert chat_message.response == ""
