@@ -121,14 +121,14 @@ export class ApiService {
 
   // Chat endpoints
   async sendMessage(message) {
-    return this.request('/chat/', {
+    return this.request('/chat-message/', {
       method: 'POST',
       body: JSON.stringify({ message }),
     });
   }
 
   async getChatHistory() {
-    return this.request('/chat/');
+    return this.request('/chat-message/');
   }
 }
 
