@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from .models import CustomUser, Job, SavedJob, CoverLetter, Application
-from .serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJobSerializer, CoverLetterSerializer, ApplicationSerializer
+from .models import CustomUser, Job, SavedJob, CoverLetter, Application, ChatMessage
+from .serializer import UserSerializer, JobSerializer, JobListSerializer, SavedJobSerializer, CoverLetterSerializer, ApplicationSerializer, ChatMessageSerializer
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -324,3 +324,64 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(application)
         return Response(serializer.data)
+    
+class ChatMessageViewSet(viewsets.ModelViewSet):
+    serializer_class = ChatMessageSerializer
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ChatMessageThrottle, BurstRateThrottle, DailyAILimitThrottle]
+    
+    def get_throttles(self):
+        if self.action == 'create':
+            return [throttle() for throttle in self.throttle_classes]
+        return []
+    
+    def get_queryset(self):
+        return ChatMessage.objects.filter(user=self.request.user)
+    
+    @method_decorator([require_verified_user, log_ai_usage])
+    def create(self, request):
+        """Create chat message and get AI response"""
+        message_text = request.data.get('message')
+        
+        if not message_text:
+            return Response(
+                {"detail": "Message is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Check user quota
+        quota, created = UserAIQuota.objects.get_or_create(user=request.user)
+        
+        if not quota.can_make_request():
+            return Response({
+                'error': 'Quota exceeded',
+                'message': 'You have reached your AI generation limit',
+                'daily_remaining': max(0, quota.daily_limit - quota.daily_usage),
+                'monthly_remaining': max(0, quota.monthly_limit - quota.monthly_usage)
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        
+        # Get recent conversation history
+        recent_messages = ChatMessage.objects.filter(
+            user=request.user
+        ).order_by('-created_at')[:5]
+        
+        conversation_history = [
+            {'message': msg.message, 'response': msg.response}
+            for msg in reversed(recent_messages)
+        ]
+        
+        # Generate AI response
+        ai_response = ai_helper.generate_chat_response(message_text, conversation_history)
+        
+        # Save message
+        chat_message = ChatMessage.objects.create(
+            user=request.user,
+            message=message_text,
+            response=ai_response
+        )
+        
+        # Increment usage
+        quota.increment_usage()
+        
+        serializer = self.get_serializer(chat_message)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
