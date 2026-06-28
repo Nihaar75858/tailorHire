@@ -118,6 +118,18 @@ export class ApiService {
   async getApplications() {
     return this.request('/applications/');
   }
+
+  // Chat endpoints
+  async sendMessage(message) {
+    return this.request('/chat/', {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  }
+
+  async getChatHistory() {
+    return this.request('/chat/');
+  }
 }
 
 export default new ApiService();
