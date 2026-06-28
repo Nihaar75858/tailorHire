@@ -553,4 +553,118 @@ def test_invalid_status_rejected(api_client):
 
     assert response.status_code == 400
     
-    
+#########################
+# Chat Message Views Tests
+#########################
+@pytest.mark.django_db
+class TestChatMessageAPI:
+
+    def test_auth_required(self, api_client):
+        url = reverse("chat-message-list")
+        res = api_client.get(url)
+
+        assert res.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_create_chat_message_success(self, auth_client, user, monkeypatch):
+        url = reverse("chat-message-list")
+
+        def mock_generate(*args, **kwargs):
+            return "Here's some career advice."
+
+        monkeypatch.setattr(
+            "api.views.ai_helper.generate_chat_response",
+            mock_generate
+        )
+
+        payload = {"message": "How do I prepare for a technical interview?"}
+        res = auth_client.post(url, payload, format="json")
+
+        assert res.status_code == status.HTTP_201_CREATED
+        assert res.data["message"] == "How do I prepare for a technical interview?"
+        assert res.data["response"] == "Here's some career advice."
+        assert models.ChatMessage.objects.count() == 1
+        assert models.ChatMessage.objects.first().user == user
+
+    def test_missing_message_returns_400(self, auth_client):
+        url = reverse("chat-message-list")
+        res = auth_client.post(url, {}, format="json")
+
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Message is required" in str(res.data)
+
+    def test_user_sees_only_their_chat_messages(self, api_client, create_user):
+        user1 = create_user(username="chatuser1", email="chatuser1@test.com")
+        user2 = create_user(username="chatuser2", email="chatuser2@test.com")
+
+        models.ChatMessage.objects.create(user=user1, message="Hi", response="Hello!")
+        models.ChatMessage.objects.create(user=user2, message="Hey", response="Hey there!")
+
+        api_client.force_authenticate(user=user1)
+        res = api_client.get(reverse("chat-message-list"))
+
+        assert res.status_code == status.HTTP_200_OK
+        results = res.data["results"]
+        assert len(results) == 1
+        assert results[0]["message"] == "Hi"
+
+    def test_conversation_history_passed_in_chronological_order(
+        self, auth_client, user, monkeypatch
+    ):
+        """View must pass prior messages oldest-first, so recent context is intact"""
+        for i in range(5):
+            models.ChatMessage.objects.create(
+                user=user, message=f"Question {i}", response=f"Answer {i}"
+            )
+
+        captured = {}
+
+        def mock_generate(message_text, conversation_history=None):
+            captured["conversation_history"] = conversation_history
+            return "New response"
+
+        monkeypatch.setattr("api.views.ai_helper.generate_chat_response", mock_generate)
+
+        res = auth_client.post(reverse("chat-message-list"), {"message": "Question 5"}, format="json")
+
+        assert res.status_code == status.HTTP_201_CREATED
+        history = captured["conversation_history"]
+        assert len(history) == 5
+        assert history[0]["message"] == "Question 0"   # oldest first
+        assert history[-1]["message"] == "Question 4"  # most recent last
+
+    def test_response_is_not_settable_by_client(self, auth_client, monkeypatch):
+        def mock_generate(*args, **kwargs):
+            return "Real AI response"
+
+        monkeypatch.setattr("api.views.ai_helper.generate_chat_response", mock_generate)
+
+        res = auth_client.post(reverse("chat-message-list"), {
+            "message": "Hello", "response": "Injected response"
+        }, format="json")
+
+        assert res.status_code == status.HTTP_201_CREATED
+        assert res.data["response"] == "Real AI response"
+
+    def test_brand_new_account_is_rejected(self, api_client, create_user, monkeypatch):
+        """Accounts under 1 hour old shouldn't reach AI chat -- anti-abuse"""
+        new_user = create_user(verified=False, username="newbie", email="newbie@test.com")
+        api_client.force_authenticate(user=new_user)
+
+        monkeypatch.setattr(
+            "api.views.ai_helper.generate_chat_response",
+            lambda *a, **k: "Should not be reached"
+        )
+
+        res = api_client.post(reverse("chat-message-list"), {"message": "Hello"}, format="json")
+        assert res.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_quota_exceeded_returns_429(self, auth_client, user, monkeypatch):
+        models.UserAIQuota.objects.create(user=user, daily_limit=0, monthly_limit=0)
+
+        monkeypatch.setattr(
+            "api.views.ai_helper.generate_chat_response",
+            lambda *a, **k: "Should not be reached"
+        )
+
+        res = auth_client.post(reverse("chat-message-list"), {"message": "Hello"}, format="json")
+        assert res.status_code == status.HTTP_429_TOO_MANY_REQUESTS
