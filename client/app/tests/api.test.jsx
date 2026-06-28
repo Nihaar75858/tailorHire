@@ -337,4 +337,57 @@ describe("User Profile API", () => {
   });
 });
 
+// Chat Endpoints
+describe("Chat API", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
 
+  test("sendMessage sends POST request with message payload", async () => {
+    const mockResponse = { id: 1, message: "Hello", response: "Hi there!", created_at: "2026-06-28T00:00:00Z" };
+
+    const requestSpy = vi.spyOn(ApiService, "request").mockResolvedValue(mockResponse);
+
+    const result = await ApiService.sendMessage("Hello");
+
+    expect(requestSpy).toHaveBeenCalledWith("/chat/", {
+      method: "POST",
+      body: JSON.stringify({ message: "Hello" }),
+    });
+
+    expect(result).toEqual(mockResponse);
+  });
+
+  test("sendMessage propagates errors thrown by request", async () => {
+    const error = new Error("Failed to send");
+    vi.spyOn(ApiService, "request").mockRejectedValue(error);
+
+    await expect(ApiService.sendMessage("Hello")).rejects.toThrow("Failed to send");
+  });
+
+  test("getChatHistory sends GET request to the chat endpoint", async () => {
+    const mockResponse = {
+      count: 2,
+      next: null,
+      previous: null,
+      results: [
+        { id: 1, message: "Hi", response: "Hello!", created_at: "2026-06-28T00:00:00Z" },
+        { id: 2, message: "Bye", response: "See you!", created_at: "2026-06-28T00:01:00Z" },
+      ],
+    };
+
+    const requestSpy = vi.spyOn(ApiService, "request").mockResolvedValue(mockResponse);
+
+    const result = await ApiService.getChatHistory();
+
+    expect(requestSpy).toHaveBeenCalledWith("/chat/");
+    expect(result).toEqual(mockResponse);
+  });
+
+  test("getChatHistory propagates errors thrown by request", async () => {
+    const error = new Error("Network error");
+    vi.spyOn(ApiService, "request").mockRejectedValue(error);
+
+    await expect(ApiService.getChatHistory()).rejects.toThrow("Network error");
+  });
+});
