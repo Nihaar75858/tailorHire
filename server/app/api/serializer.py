@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
-from .models import CustomUser, Job, SavedJob, CoverLetter, Application
+from .models import CustomUser, Job, SavedJob, CoverLetter, Application, ChatMessage
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -100,3 +100,9 @@ class ApplicationSerializer(serializers.ModelSerializer):
         model = Application
         fields = '__all__' 
         read_only_fields = ['user', 'applied_at', 'updated_at']
+        
+class ChatMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChatMessage
+        fields = ['id', 'message', 'response', 'created_at']
+        read_only_fields = ['response', 'created_at']
