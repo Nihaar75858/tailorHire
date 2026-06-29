@@ -350,7 +350,7 @@ describe("Chat API", () => {
 
     const result = await ApiService.sendMessage("Hello");
 
-    expect(requestSpy).toHaveBeenCalledWith("/chat/", {
+    expect(requestSpy).toHaveBeenCalledWith("/chat-message/", {
       method: "POST",
       body: JSON.stringify({ message: "Hello" }),
     });
@@ -380,7 +380,7 @@ describe("Chat API", () => {
 
     const result = await ApiService.getChatHistory();
 
-    expect(requestSpy).toHaveBeenCalledWith("/chat/");
+    expect(requestSpy).toHaveBeenCalledWith("/chat-message/");
     expect(result).toEqual(mockResponse);
   });
 
