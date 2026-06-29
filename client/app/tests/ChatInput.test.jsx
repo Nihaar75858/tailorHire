@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { test, expect, vi } from "vitest";
+import { test, expect, vi, beforeEach } from "vitest";
 import ChatInput from '../src/components/chat/ChatInput';
 
 vi.mock('lucide-react', () => ({
@@ -8,6 +8,10 @@ vi.mock('lucide-react', () => ({
 }));
 
 const mockSend = vi.fn();
+
+beforeEach(() => {
+  mockSend.mockClear(); // resets call count/history without removing the implementation
+});
 
 test('renders an empty input and a disabled send button initially', () => {
   render(<ChatInput onSend={mockSend} disabled={false} />);
