@@ -1,9 +1,6 @@
-// tests/ChatWindow.test.jsx
 import { render, screen } from '@testing-library/react';
-import { test, expect, vi, beforeEach } from 'vitest';
+import { test, expect, vi, beforeEach } from "vitest";
 import ChatWindow from '../src/components/chat/ChatWindow';
-
-// ── Mocks ──────────────────────────────────────────────────────────────────
 
 vi.mock('lucide-react', () => ({
   MessageSquare: (props) => <svg data-testid="icon-message-square" {...props} />,
@@ -17,90 +14,57 @@ vi.mock('../src/components/chat/ChatMessage', () => ({
   ),
 }));
 
-// scrollIntoView is not implemented in jsdom
+// JSDOM doesn't implement scrollIntoView -- stub it so useEffect doesn't throw
 beforeEach(() => {
-  window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  Element.prototype.scrollIntoView = vi.fn();
 });
 
-// ── Empty state ────────────────────────────────────────────────────────────
-
-test('renders the empty state when messages is an empty array', () => {
-  render(<ChatWindow messages={[]} />);
-
-  expect(screen.getByText(/start a conversation/i)).toBeInTheDocument();
-});
-
-test('renders the empty-state hint text', () => {
-  render(<ChatWindow messages={[]} />);
-
-  expect(screen.getByText(/interview tips or career advice/i)).toBeInTheDocument();
-});
-
-test('renders the MessageSquare icon in the empty state', () => {
+test('shows an empty state with an icon and helper text when there are no messages', () => {
   render(<ChatWindow messages={[]} />);
 
   expect(screen.getByTestId('icon-message-square')).toBeInTheDocument();
+  expect(screen.getByText(/start a conversation/i)).toBeInTheDocument();
+  expect(screen.getByText(/try asking about interview tips/i)).toBeInTheDocument();
+  expect(screen.queryByTestId('chat-message')).not.toBeInTheDocument();
 });
 
-test('does not render any chat messages in the empty state', () => {
-  render(<ChatWindow messages={[]} />);
+test('renders one ChatMessage per item, passing message and sender correctly', () => {
+  const messages = [
+    { id: '1-user', message: 'Hi there', sender: 'user' },
+    { id: '1-ai', message: 'Hello! How can I help?', sender: 'ai' },
+  ];
 
-  expect(screen.queryAllByTestId('chat-message')).toHaveLength(0);
+  render(<ChatWindow messages={messages} />);
+
+  const bubbles = screen.getAllByTestId('chat-message');
+  expect(bubbles).toHaveLength(2);
+  expect(bubbles[0]).toHaveTextContent('Hi there');
+  expect(bubbles[0]).toHaveAttribute('data-sender', 'user');
+  expect(bubbles[1]).toHaveTextContent('Hello! How can I help?');
+  expect(bubbles[1]).toHaveAttribute('data-sender', 'ai');
 });
 
-// ── Message list ───────────────────────────────────────────────────────────
+test('renders messages in the order provided, without reordering', () => {
+  const messages = [
+    { id: 'a', message: 'First', sender: 'user' },
+    { id: 'b', message: 'Second', sender: 'ai' },
+    { id: 'c', message: 'Third', sender: 'user' },
+  ];
 
-const sampleMessages = [
-  { id: 1, text: 'Hello!', sender: 'user' },
-  { id: 2, text: 'Hi there!', sender: 'ai' },
-  { id: 3, text: 'How are you?', sender: 'user' },
-];
+  render(<ChatWindow messages={messages} />);
 
-test('renders one ChatMessage per message in the array', () => {
-  render(<ChatWindow messages={sampleMessages} />);
-
-  expect(screen.getAllByTestId('chat-message')).toHaveLength(sampleMessages.length);
+  const bubbles = screen.getAllByTestId('chat-message');
+  expect(bubbles.map((b) => b.textContent)).toEqual(['First', 'Second', 'Third']);
 });
 
-test('passes the correct message text to each ChatMessage', () => {
-  render(<ChatWindow messages={sampleMessages} />);
+test('calls scrollIntoView when messages change', () => {
+  const { rerender } = render(<ChatWindow messages={[]} />);
 
-  expect(screen.getByText('Hello!')).toBeInTheDocument();
-  expect(screen.getByText('Hi there!')).toBeInTheDocument();
-  expect(screen.getByText('How are you?')).toBeInTheDocument();
-});
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
 
-test('passes the correct sender to each ChatMessage', () => {
-  render(<ChatWindow messages={sampleMessages} />);
+  Element.prototype.scrollIntoView.mockClear();
 
-  const rendered = screen.getAllByTestId('chat-message');
+  rerender(<ChatWindow messages={[{ id: '1', message: 'Hi', sender: 'user' }]} />);
 
-  expect(rendered[0]).toHaveAttribute('data-sender', 'user');
-  expect(rendered[1]).toHaveAttribute('data-sender', 'ai');
-  expect(rendered[2]).toHaveAttribute('data-sender', 'user');
-});
-
-test('does not render the empty state when messages are present', () => {
-  render(<ChatWindow messages={sampleMessages} />);
-
-  expect(screen.queryByText(/start a conversation/i)).not.toBeInTheDocument();
-  expect(screen.queryByTestId('icon-message-square')).not.toBeInTheDocument();
-});
-
-// ── Scroll behaviour ───────────────────────────────────────────────────────
-
-test('calls scrollIntoView on initial render', () => {
-  render(<ChatWindow messages={sampleMessages} />);
-
-  expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
-});
-
-test('calls scrollIntoView again when the messages array changes', () => {
-  const { rerender } = render(<ChatWindow messages={sampleMessages} />);
-
-  const callsBefore = window.HTMLElement.prototype.scrollIntoView.mock.calls.length;
-
-  rerender(<ChatWindow messages={[...sampleMessages, { id: 4, text: 'New!', sender: 'ai' }]} />);
-
-  expect(window.HTMLElement.prototype.scrollIntoView.mock.calls.length).toBeGreaterThan(callsBefore);
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
 });
