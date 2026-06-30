@@ -8,14 +8,14 @@ test('renders the message text', () => {
   expect(screen.getByText('Hello there')).toBeInTheDocument();
 });
 
-test('aligns to the right and uses indigo styling when sender is "user"', () => {
+test('aligns to the right and uses white styling when sender is "user"', () => {
   const { container } = render(<ChatMessage message="Hi" sender="user" />);
 
   const outerDiv = container.firstChild;
   const bubble = outerDiv.firstChild;
 
   expect(outerDiv.className).toContain('justify-end');
-  expect(bubble.className).toContain('bg-indigo-600');
+  expect(bubble.className).toContain('bg-neutral-600');
   expect(bubble.className).toContain('text-white');
 });
 
@@ -26,8 +26,7 @@ test('aligns to the left and uses gray styling when sender is not "user"', () =>
   const bubble = outerDiv.firstChild;
 
   expect(outerDiv.className).toContain('justify-start');
-  expect(bubble.className).toContain('bg-gray-100');
-  expect(bubble.className).toContain('text-gray-900');
+  expect(bubble.className).toContain('text-black');
 });
 
 test('treats any non-"user" sender value as a bot message', () => {

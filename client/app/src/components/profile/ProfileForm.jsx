@@ -39,7 +39,7 @@ const ProfileForm = ({ initialData, onSubmit, onCancel }) => {
             <input
               type="text"
               name="firstName"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               value={formData.firstName}
               onChange={handleChange}
             />
@@ -51,7 +51,7 @@ const ProfileForm = ({ initialData, onSubmit, onCancel }) => {
             <input
               type="text"
               name="lastName"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               value={formData.lastName}
               onChange={handleChange}
             />
@@ -65,7 +65,7 @@ const ProfileForm = ({ initialData, onSubmit, onCancel }) => {
           <input
             type="email"
             name="email"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
             value={formData.email}
             onChange={handleChange}
           />
@@ -78,7 +78,7 @@ const ProfileForm = ({ initialData, onSubmit, onCancel }) => {
           <input
             type="text"
             name="location"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
             value={formData.location}
             onChange={handleChange}
             placeholder="e.g., San Francisco, CA"
@@ -91,7 +91,7 @@ const ProfileForm = ({ initialData, onSubmit, onCancel }) => {
           </label>
           <textarea
             name="bio"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
             rows={4}
             value={formData.bio}
             onChange={handleChange}
@@ -106,7 +106,7 @@ const ProfileForm = ({ initialData, onSubmit, onCancel }) => {
           <input
             type="text"
             name="skills"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
             value={formData.skills}
             onChange={handleChange}
             placeholder="e.g., React, Python, Django, Machine Learning"
@@ -116,7 +116,7 @@ const ProfileForm = ({ initialData, onSubmit, onCancel }) => {
         <div className="flex space-x-3">
           <button
             onClick={handleSubmit}
-            className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+            className="flex-1 px-6 py-3 bg-neutral-600 text-white rounded-lg hover:bg-stone-900 transition-colors font-medium"
           >
             Save Changes
           </button>

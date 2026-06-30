@@ -18,7 +18,7 @@ const NavigationConfig = {
       to: "/coverletter",
       submenus: null,
     },
-    // { name: "Chat", to: "/chat", submenus: null },
+    { name: "Chat", to: "/chat", submenus: null },
   ],
 };
 

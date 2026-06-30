@@ -9,6 +9,7 @@ import Navbar from "./components/Navbar/Navbar";
 import CoverLetterPage from "./pages/CoverLetter/CoverLetterPage";
 import ApplicationsPage from "./pages/Application/ApplicationsPage";
 import ProfilePage from "./pages/Profile/ProfilePage";
+import ChatPage from "./pages/Chat/ChatPage";
 import "./App.css";
 
 function App() {
@@ -25,9 +26,10 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/userdashboard" element={<UserDashboard />} />
         <Route path="/jobs" element={<JobsPage />} />
-        <Route path="/coverletter" element={<CoverLetterPage />}/>
+        <Route path="/coverletter" element={<CoverLetterPage />} />
         <Route path="/applications" element={<ApplicationsPage />} />
-        <Route path="/profile" element={<ProfilePage />}/>
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/chat" element={<ChatPage />} />
       </Routes>
     </>
   );

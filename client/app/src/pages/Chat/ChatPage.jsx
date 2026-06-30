@@ -61,17 +61,17 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-[calc(100vh-12rem)] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-r from-orange-200 via-orange-400 to-orange-600 p-6 rounded-lg shadow-sm border border-gray-200 h-[calc(100vh-12rem)] flex flex-col">
       <div className="p-6 border-b border-gray-200">
-        <h2 className="text-2xl font-bold text-gray-900">AI Career Assistant</h2>
-        <p className="text-gray-600 mt-1">
+        <h2 className="text-2xl font-bold text-white">AI Career Assistant</h2>
+        <p className="text-white mt-1">
           Ask me anything about jobs, interviews, or career guidance
         </p>
         {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
       </div>
 
       {loadingHistory ? (
-        <div className="flex-1 flex items-center justify-center text-gray-500">
+        <div className="flex-1 flex items-center justify-center text-white">
           Loading conversation...
         </div>
       ) : (

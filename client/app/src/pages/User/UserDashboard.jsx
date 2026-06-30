@@ -17,7 +17,7 @@ const cards = [
   {
     title: "Chat with TailorHire",
     description: "Chat with our AI assistant for job search tips.",
-    link: "/tailorhire",
+    link: "/chat",
   },
 ];
 

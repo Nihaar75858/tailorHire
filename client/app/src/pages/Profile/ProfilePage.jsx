@@ -52,10 +52,10 @@ const ProfilePage = () => {
     <div className="space-y-6 p-6 bg-gradient-to-r from-orange-200 via-orange-400 to-orange-600">
       <div className="max-w-3xl mx-auto">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          <h2 className="text-3xl font-bold text-white mb-2">
             Your Profile
           </h2>
-          <p className="text-gray-600">Manage your professional information</p>
+          <p className="text-white">Manage your professional information</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 my-4">
