@@ -31,7 +31,7 @@ const ChatWindow = ({ messages }) => {
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-4">
       {messages.map((msg) => (
-        <ChatMessage key={msg.id} message={msg.text} sender={msg.sender} />
+        <ChatMessage key={msg.id} message={msg.message} sender={msg.sender} />
       ))}
       <div ref={messagesEndRef} />
     </div>

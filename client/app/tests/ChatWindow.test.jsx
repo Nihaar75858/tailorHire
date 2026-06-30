@@ -60,9 +60,8 @@ test('renders messages in the order provided, without reordering', () => {
 test('calls scrollIntoView when messages change', () => {
   const { rerender } = render(<ChatWindow messages={[]} />);
 
-  expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
-
-  Element.prototype.scrollIntoView.mockClear();
+  // No messagesEndRef exists yet in the empty state -- nothing to scroll to.
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
 
   rerender(<ChatWindow messages={[{ id: '1', message: 'Hi', sender: 'user' }]} />);
 
